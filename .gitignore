@@ -1,0 +1,19 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# macOS
+.DS_Store
+
+# Large build-time source files — processed offline, not needed at runtime
+hsr-lore-from-fandom/honkai_star_rail_pages_current.xml
+hsr-lore-from-fandom/hsr_v1_raw_lore.jsonl
+
+# MLX / training artifacts — generated outputs, reproducible from training data
+adapters/
+*.gguf

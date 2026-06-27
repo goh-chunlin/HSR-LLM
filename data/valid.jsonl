@@ -1,0 +1,15 @@
+{"messages":[{"role":"user","content":"Under which Path is Dominicus listed?"},{"role":"assistant","content":"Harmony."}]}
+{"messages":[{"role":"user","content":"Which Path section includes Dominicus among Harmonic Strings?"},{"role":"assistant","content":"Harmony."}]}
+{"messages":[{"role":"user","content":"Is Dominicus listed under Preservation?"},{"role":"assistant","content":"No. Dominicus is listed under Harmony."}]}
+{"messages":[{"role":"user","content":"Dominicus belongs to Harmony or Erudition?"},{"role":"assistant","content":"Harmony."}]}
+{"messages":[{"role":"user","content":"Correct this statement: Dominicus is listed under Nihility."},{"role":"assistant","content":"Incorrect. Dominicus is listed under Harmony."}]}
+{"messages":[{"role":"user","content":"Under which Path is Wingperor listed?"},{"role":"assistant","content":"Abundance."}]}
+{"messages":[{"role":"user","content":"Which Path includes Wingperor among Denizens of Abundance?"},{"role":"assistant","content":"Abundance."}]}
+{"messages":[{"role":"user","content":"Is Wingperor listed under The Hunt?"},{"role":"assistant","content":"No. Wingperor is listed under Abundance."}]}
+{"messages":[{"role":"user","content":"Wingperor belongs to Abundance or Destruction?"},{"role":"assistant","content":"Abundance."}]}
+{"messages":[{"role":"user","content":"Fix this claim: Wingperor is listed under Harmony."},{"role":"assistant","content":"Incorrect. Wingperor is listed under Abundance."}]}
+{"messages":[{"role":"user","content":"Under which Path is Zulo listed?"},{"role":"assistant","content":"Destruction."}]}
+{"messages":[{"role":"user","content":"Which Path section names Zulo among Lord Ravagers?"},{"role":"assistant","content":"Destruction."}]}
+{"messages":[{"role":"user","content":"Is Zulo listed under Remembrance?"},{"role":"assistant","content":"No. Zulo is listed under Destruction."}]}
+{"messages":[{"role":"user","content":"Zulo belongs to Destruction or Elation?"},{"role":"assistant","content":"Destruction."}]}
+{"messages":[{"role":"user","content":"Correct this statement: Zulo is listed under Preservation."},{"role":"assistant","content":"Incorrect. Zulo is listed under Destruction."}]}

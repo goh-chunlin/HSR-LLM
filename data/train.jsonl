@@ -1,0 +1,85 @@
+{"messages":[{"role":"user","content":"Under which Path is Silver Wolf listed as an Emanator entry?"},{"role":"assistant","content":"Elation."}]}
+{"messages":[{"role":"user","content":"Which named Emanator appears under Elation with a LV.999 tag?"},{"role":"assistant","content":"Silver Wolf."}]}
+{"messages":[{"role":"user","content":"Is Silver Wolf from Preservation?"},{"role":"assistant","content":"No. Silver Wolf is listed under Elation."}]}
+{"messages":[{"role":"user","content":"Silver Wolf belongs to Elation or Nihility?"},{"role":"assistant","content":"Elation."}]}
+{"messages":[{"role":"user","content":"Correct this statement: Silver Wolf is a Nihility Emanator."},{"role":"assistant","content":"Incorrect. Silver Wolf is listed under Elation."}]}
+{"messages":[{"role":"user","content":"Under which Path is Diamond listed?"},{"role":"assistant","content":"Preservation."}]}
+{"messages":[{"role":"user","content":"Which Path includes Diamond in the IPC list?"},{"role":"assistant","content":"Preservation."}]}
+{"messages":[{"role":"user","content":"Is Diamond listed under Destruction?"},{"role":"assistant","content":"No. Diamond is listed under Preservation."}]}
+{"messages":[{"role":"user","content":"Diamond belongs to Preservation or Harmony?"},{"role":"assistant","content":"Preservation."}]}
+{"messages":[{"role":"user","content":"Fix this: Diamond is an Erudition Emanator."},{"role":"assistant","content":"Incorrect. Diamond is listed under Preservation."}]}
+{"messages":[{"role":"user","content":"Under which Path is Acheron listed?"},{"role":"assistant","content":"Nihility."}]}
+{"messages":[{"role":"user","content":"Which Path section names Acheron under Self-Annihilators?"},{"role":"assistant","content":"Nihility."}]}
+{"messages":[{"role":"user","content":"Is Acheron from The Hunt?"},{"role":"assistant","content":"No. Acheron is listed under Nihility."}]}
+{"messages":[{"role":"user","content":"Acheron is tied to Nihility or Preservation?"},{"role":"assistant","content":"Nihility."}]}
+{"messages":[{"role":"user","content":"Correct this claim: Acheron is listed under Elation."},{"role":"assistant","content":"Incorrect. Acheron is listed under Nihility."}]}
+{"messages":[{"role":"user","content":"Under which Path is Skaracabaz listed?"},{"role":"assistant","content":"Propagation."}]}
+{"messages":[{"role":"user","content":"Which Path section includes Skaracabaz of The Swarm?"},{"role":"assistant","content":"Propagation."}]}
+{"messages":[{"role":"user","content":"Is Skaracabaz listed under Abundance?"},{"role":"assistant","content":"No. Skaracabaz is listed under Propagation."}]}
+{"messages":[{"role":"user","content":"Skaracabaz belongs to Propagation or Destruction?"},{"role":"assistant","content":"Propagation."}]}
+{"messages":[{"role":"user","content":"Fix this statement: Skaracabaz is a Harmony Emanator."},{"role":"assistant","content":"Incorrect. Skaracabaz is listed under Propagation."}]}
+{"messages":[{"role":"user","content":"Under which Path is Dr. Primitive listed?"},{"role":"assistant","content":"Erudition."}]}
+{"messages":[{"role":"user","content":"Which Path section lists Dr. Primitive in the Genius Society?"},{"role":"assistant","content":"Erudition."}]}
+{"messages":[{"role":"user","content":"Is Dr. Primitive listed under Preservation?"},{"role":"assistant","content":"No. Dr. Primitive is listed under Erudition."}]}
+{"messages":[{"role":"user","content":"Dr. Primitive belongs to Erudition or Nihility?"},{"role":"assistant","content":"Erudition."}]}
+{"messages":[{"role":"user","content":"Correct this: Dr. Primitive is from The Hunt."},{"role":"assistant","content":"Incorrect. Dr. Primitive is listed under Erudition."}]}
+{"messages":[{"role":"user","content":"Under which Path is Sunday listed as temporary?"},{"role":"assistant","content":"Harmony."}]}
+{"messages":[{"role":"user","content":"Which Path section marks Sunday as temporary?"},{"role":"assistant","content":"Harmony."}]}
+{"messages":[{"role":"user","content":"Is Sunday listed under Elation?"},{"role":"assistant","content":"No. Sunday is listed as temporary under Harmony."}]}
+{"messages":[{"role":"user","content":"Sunday is associated with Harmony or Propagation?"},{"role":"assistant","content":"Harmony."}]}
+{"messages":[{"role":"user","content":"Fix this claim: Sunday is listed under Nihility."},{"role":"assistant","content":"Incorrect. Sunday is listed as temporary under Harmony."}]}
+{"messages":[{"role":"user","content":"Under which Path is Shuhu listed?"},{"role":"assistant","content":"Abundance."}]}
+{"messages":[{"role":"user","content":"Which Path includes Shuhu among Denizens of Abundance?"},{"role":"assistant","content":"Abundance."}]}
+{"messages":[{"role":"user","content":"Is Shuhu listed under Destruction?"},{"role":"assistant","content":"No. Shuhu is listed under Abundance."}]}
+{"messages":[{"role":"user","content":"Shuhu belongs to Abundance or Erudition?"},{"role":"assistant","content":"Abundance."}]}
+{"messages":[{"role":"user","content":"Correct this statement: Shuhu is a Preservation Emanator."},{"role":"assistant","content":"Incorrect. Shuhu is listed under Abundance."}]}
+{"messages":[{"role":"user","content":"Under which Path is Evanescia listed?"},{"role":"assistant","content":"Abundance."}]}
+{"messages":[{"role":"user","content":"Which Path includes Evanescia under Elixir Seekers?"},{"role":"assistant","content":"Abundance."}]}
+{"messages":[{"role":"user","content":"Is Evanescia listed under Harmony?"},{"role":"assistant","content":"No. Evanescia is listed under Abundance."}]}
+{"messages":[{"role":"user","content":"Evanescia belongs to Abundance or Nihility?"},{"role":"assistant","content":"Abundance."}]}
+{"messages":[{"role":"user","content":"Fix this: Evanescia is listed under Propagation."},{"role":"assistant","content":"Incorrect. Evanescia is listed under Abundance."}]}
+{"messages":[{"role":"user","content":"Under which Path is Herta listed?"},{"role":"assistant","content":"Erudition."}]}
+{"messages":[{"role":"user","content":"Which Path section includes Herta in the Genius Society?"},{"role":"assistant","content":"Erudition."}]}
+{"messages":[{"role":"user","content":"Is Herta listed under Abundance?"},{"role":"assistant","content":"No. Herta is listed under Erudition."}]}
+{"messages":[{"role":"user","content":"Herta belongs to Erudition or Preservation?"},{"role":"assistant","content":"Erudition."}]}
+{"messages":[{"role":"user","content":"Correct this claim: Herta is from The Hunt."},{"role":"assistant","content":"Incorrect. Herta is listed under Erudition."}]}
+{"messages":[{"role":"user","content":"Under which Path is Phantylia listed?"},{"role":"assistant","content":"Destruction."}]}
+{"messages":[{"role":"user","content":"Which Path section names Phantylia among Lord Ravagers?"},{"role":"assistant","content":"Destruction."}]}
+{"messages":[{"role":"user","content":"Is Phantylia listed under Harmony?"},{"role":"assistant","content":"No. Phantylia is listed under Destruction."}]}
+{"messages":[{"role":"user","content":"Phantylia belongs to Destruction or Erudition?"},{"role":"assistant","content":"Destruction."}]}
+{"messages":[{"role":"user","content":"Fix this statement: Phantylia is listed under Remembrance."},{"role":"assistant","content":"Incorrect. Phantylia is listed under Destruction."}]}
+{"messages":[{"role":"user","content":"Under which Path is Jing Yuan listed?"},{"role":"assistant","content":"The Hunt."}]}
+{"messages":[{"role":"user","content":"Which Path section includes Jing Yuan with the Lightning-Lord note?"},{"role":"assistant","content":"The Hunt."}]}
+{"messages":[{"role":"user","content":"Is Jing Yuan listed under Destruction?"},{"role":"assistant","content":"No. Jing Yuan is listed under The Hunt."}]}
+{"messages":[{"role":"user","content":"Jing Yuan belongs to The Hunt or Nihility?"},{"role":"assistant","content":"The Hunt."}]}
+{"messages":[{"role":"user","content":"Correct this: Jing Yuan is listed under Preservation."},{"role":"assistant","content":"Incorrect. Jing Yuan is listed under The Hunt."}]}
+{"messages":[{"role":"user","content":"Under which Path is Feixiao listed?"},{"role":"assistant","content":"The Hunt."}]}
+{"messages":[{"role":"user","content":"Which Path section includes Feixiao with the Flying Aureus title?"},{"role":"assistant","content":"The Hunt."}]}
+{"messages":[{"role":"user","content":"Is Feixiao listed under Elation?"},{"role":"assistant","content":"No. Feixiao is listed under The Hunt."}]}
+{"messages":[{"role":"user","content":"Feixiao belongs to The Hunt or Harmony?"},{"role":"assistant","content":"The Hunt."}]}
+{"messages":[{"role":"user","content":"Fix this statement: Feixiao is listed under Abundance."},{"role":"assistant","content":"Incorrect. Feixiao is listed under The Hunt."}]}
+{"messages":[{"role":"user","content":"Under which Path is March 7th listed?"},{"role":"assistant","content":"Remembrance."}]}
+{"messages":[{"role":"user","content":"Which Path section includes March 7th under Pure Children of Anasrava?"},{"role":"assistant","content":"Remembrance."}]}
+{"messages":[{"role":"user","content":"Is March 7th listed under Harmony?"},{"role":"assistant","content":"No. March 7th is listed under Remembrance."}]}
+{"messages":[{"role":"user","content":"March 7th belongs to Remembrance or Propagation?"},{"role":"assistant","content":"Remembrance."}]}
+{"messages":[{"role":"user","content":"Correct this claim: March 7th is listed under Nihility."},{"role":"assistant","content":"Incorrect. March 7th is listed under Remembrance."}]}
+{"messages":[{"role":"user","content":"Under which Path is Cyrene listed?"},{"role":"assistant","content":"Remembrance."}]}
+{"messages":[{"role":"user","content":"Which Path section includes Cyrene among Pure Children of Anasrava?"},{"role":"assistant","content":"Remembrance."}]}
+{"messages":[{"role":"user","content":"Is Cyrene listed under Preservation?"},{"role":"assistant","content":"No. Cyrene is listed under Remembrance."}]}
+{"messages":[{"role":"user","content":"Cyrene belongs to Remembrance or Elation?"},{"role":"assistant","content":"Remembrance."}]}
+{"messages":[{"role":"user","content":"Fix this statement: Cyrene is listed under Destruction."},{"role":"assistant","content":"Incorrect. Cyrene is listed under Remembrance."}]}
+{"messages":[{"role":"user","content":"Under which Path is Taravan Keane listed?"},{"role":"assistant","content":"Preservation."}]}
+{"messages":[{"role":"user","content":"Which Path section includes Taravan Keane under the IPC?"},{"role":"assistant","content":"Preservation."}]}
+{"messages":[{"role":"user","content":"Is Taravan Keane listed under Erudition?"},{"role":"assistant","content":"No. Taravan Keane is listed under Preservation."}]}
+{"messages":[{"role":"user","content":"Taravan Keane belongs to Preservation or Nihility?"},{"role":"assistant","content":"Preservation."}]}
+{"messages":[{"role":"user","content":"Correct this claim: Taravan Keane is listed under The Hunt."},{"role":"assistant","content":"Incorrect. Taravan Keane is listed under Preservation."}]}
+{"messages":[{"role":"user","content":"Under which Path is Archforger listed?"},{"role":"assistant","content":"Destruction."}]}
+{"messages":[{"role":"user","content":"Which Path section names Archforger among Lord Ravagers?"},{"role":"assistant","content":"Destruction."}]}
+{"messages":[{"role":"user","content":"Is Archforger listed under Abundance?"},{"role":"assistant","content":"No. Archforger is listed under Destruction."}]}
+{"messages":[{"role":"user","content":"Archforger belongs to Destruction or Preservation?"},{"role":"assistant","content":"Destruction."}]}
+{"messages":[{"role":"user","content":"Fix this statement: Archforger is listed under Remembrance."},{"role":"assistant","content":"Incorrect. Archforger is listed under Destruction."}]}
+{"messages":[{"role":"user","content":"Under which Path is Beatriz listed?"},{"role":"assistant","content":"Harmony."}]}
+{"messages":[{"role":"user","content":"Which Path section includes Beatriz among Harmonic Strings?"},{"role":"assistant","content":"Harmony."}]}
+{"messages":[{"role":"user","content":"Is Beatriz listed under Nihility?"},{"role":"assistant","content":"No. Beatriz is listed under Harmony."}]}
+{"messages":[{"role":"user","content":"Beatriz belongs to Harmony or Destruction?"},{"role":"assistant","content":"Harmony."}]}
+{"messages":[{"role":"user","content":"Correct this claim: Beatriz is listed under Propagation."},{"role":"assistant","content":"Incorrect. Beatriz is listed under Harmony."}]}
