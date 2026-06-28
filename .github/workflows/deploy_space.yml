@@ -1,0 +1,58 @@
+name: Deploy HSR Lore to Hugging Face Space
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "hsr-lore-from-fandom/**"
+      - ".github/workflows/deploy_space.yml"
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: "Force deployment even if no relevant files changed"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      HUGGINGFACE_USERNAME: ${{ secrets.HUGGINGFACE_USERNAME }}
+      HUGGINGFACE_SPACE_REPO: hsr-lore
+      HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Validate required secrets
+        run: |
+          test -n "$HUGGINGFACE_USERNAME"
+          test -n "$HUGGINGFACE_TOKEN"
+
+      - name: Configure git and remote
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git remote remove space || true
+          git remote add space "https://oauth2:${HUGGINGFACE_TOKEN}@huggingface.co/spaces/${HUGGINGFACE_USERNAME}/${HUGGINGFACE_SPACE_REPO}"
+
+      - name: Ensure git-lfs is available
+        run: |
+          git lfs version || (sudo apt-get update && sudo apt-get install -y git-lfs)
+          git lfs install
+
+      - name: Deploy to Hugging Face Space
+        run: |
+          echo "Starting deployment..."
+
+          echo "Pushing all LFS objects..."
+          git lfs push --all space
+
+          echo "Executing subtree split and force push to Hugging Face Space..."
+          split_commit=$(git subtree split --prefix=hsr-lore-from-fandom HEAD)
+          git push space "${split_commit}:main" --force
