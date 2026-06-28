@@ -272,7 +272,7 @@ def hsr_rag_interface(user_query: str) -> str:
 # Build the simple Gradio layout
 demo = ui.Interface(
     fn=hsr_rag_interface,
-    inputs=ui.Textbox(label="Ask a Honkai: Star Rail Lore Question", placeholder="Who is Member 83?"),
+    inputs=ui.Textbox(label="Ask a Honkai: Star Rail Lore Question", placeholder="Who is Member 83 in Genius Society?"),
     outputs=ui.Markdown(),
     title="🌌 Honkai: Star Rail Lore RAG Engine",
     description="Hybrid retrieval backend combining BM25 keyword matching and FAISS dense vector embeddings.",
