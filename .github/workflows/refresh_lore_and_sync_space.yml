@@ -1,0 +1,94 @@
+name: Refresh Lore Index And Sync Space
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: refresh-lore-space-sync
+  cancel-in-progress: false
+
+jobs:
+  refresh-and-sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      HUGGINGFACE_USERNAME: ${{ secrets.HUGGINGFACE_USERNAME }}
+      HUGGINGFACE_SPACE_REPO: hsr-lore
+      HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v7.0.0
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Validate required secrets
+        run: |
+          test -n "$HUGGINGFACE_USERNAME"
+          test -n "$HUGGINGFACE_TOKEN"
+
+      - name: Setup Python
+        uses: actions/setup-python@v6.3.0
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+        working-directory: hsr-lore-from-fandom
+
+      - name: Rebuild lore artifacts
+        run: |
+          python extract_lore_hsr.py
+          python build_lore_vector_db.py
+        working-directory: hsr-lore-from-fandom
+
+      - name: Detect artifact changes
+        id: detect_changes
+        run: |
+          git add hsr-lore-from-fandom/hsr_v1_chunks.json \
+                  hsr-lore-from-fandom/my_hsr_1.0_index.faiss
+
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No artifact changes detected."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Artifact changes detected."
+          fi
+
+      - name: Configure git and Space remote
+        if: steps.detect_changes.outputs.changed == 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git remote remove space || true
+          git remote add space "https://oauth2:${HUGGINGFACE_TOKEN}@huggingface.co/spaces/${HUGGINGFACE_USERNAME}/${HUGGINGFACE_SPACE_REPO}"
+
+      - name: Ensure git-lfs is available
+        if: steps.detect_changes.outputs.changed == 'true'
+        run: |
+          git lfs version || (sudo apt-get update && sudo apt-get install -y git-lfs)
+          git lfs install
+
+      - name: Create ephemeral commit
+        if: steps.detect_changes.outputs.changed == 'true'
+        run: |
+          git commit -m "chore: manual lore refresh [skip ci]"
+
+      - name: Push updated artifacts to Hugging Face Space
+        if: steps.detect_changes.outputs.changed == 'true'
+        run: |
+          git lfs push space HEAD
+          split_commit=$(git subtree split --prefix=hsr-lore-from-fandom HEAD)
+          git push space "${split_commit}:main" --force
+
+      - name: Summary
+        run: |
+          if [ "${{ steps.detect_changes.outputs.changed }}" = "true" ]; then
+            echo "Space sync completed with updated artifacts."
+          else
+            echo "No changes found. Space sync skipped."
+          fi
