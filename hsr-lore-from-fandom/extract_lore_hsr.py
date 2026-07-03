@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET
 import json
 import re
+import sys
 from typing import Final
 
 # UPDATE THIS to match your exact downloaded filename
@@ -101,55 +102,66 @@ def parse_wiki_dump() -> None:
     saved_count = 0
     
     # Using 'iterparse' ensures we do not load 5M lines into memory at once
-    context = ET.iterparse(XML_FILE, events=('end',))
-    
-    # Strip namespaces automatically
-    _, root = next(context)
-    
-    with open(OUTPUT_JSONL, 'w', encoding='utf-8') as f:
-        for _, elem in context:
-            # Look for the end of a </page> block
-            if elem.tag.endswith('page'):
-                title_elem = elem.find('.//{*}title')
-                text_elem = elem.find('.//{*}text')
-                
-                if title_elem is not None and text_elem is not None:
-                    raw_title = title_elem.text
-                    raw_text = text_elem.text
-                    title = raw_title if isinstance(raw_title, str) else ""
-                    text = raw_text if isinstance(raw_text, str) else ""
+    try:
+        context = ET.iterparse(XML_FILE, events=('end',))
+
+        # Strip namespaces automatically
+        _, root = next(context)
+
+        with open(OUTPUT_JSONL, 'w', encoding='utf-8') as f:
+            for _, elem in context:
+                # Look for the end of a </page> block
+                if elem.tag.endswith('page'):
+                    title_elem = elem.find('.//{*}title')
+                    text_elem = elem.find('.//{*}text')
                     
-                    # 1. Skip if it is a system/meta/wiki page
-                    if any(banned in title for banned in BANNED_TITLES):
-                        elem.clear()
-                        root.clear()
-                        continue
-
-                    cleaned_text = clean_wikitext(text, title)
-
-                    if any(banned_kw in title or banned_kw in cleaned_text for banned_kw in BANNED_KEYWORDS):
-                        elem.clear()
-                        root.clear()
-                        continue
+                    if title_elem is not None and text_elem is not None:
+                        raw_title = title_elem.text
+                        raw_text = text_elem.text
+                        title = raw_title if isinstance(raw_title, str) else ""
+                        text = raw_text if isinstance(raw_text, str) else ""
                         
-                    # 2. Focus strictly on our Version 1.0 / Herta keyword anchors
-                    if KEYWORDS.search(title) or KEYWORDS.search(text[:2000]):
-                        # Make sure it actually has text body remaining
-                        if len(cleaned_text) > 100:
-                            data_point = {
-                                "title": title,
-                                "content": cleaned_text
-                            }
-                            f.write(json.dumps(data_point, ensure_ascii=False) + "\n")
-                            saved_count += 1
-                
-                count += 1
-                if count % 5000 == 0:
-                    print(f"Processed {count} pages... Saved {saved_count} valid lore targets.")
-                
-                # Critical Memory Management: clear the node from RAM
-                elem.clear()
-                root.clear()
+                        # 1. Skip if it is a system/meta/wiki page
+                        if any(banned in title for banned in BANNED_TITLES):
+                            elem.clear()
+                            root.clear()
+                            continue
+
+                        cleaned_text = clean_wikitext(text, title)
+
+                        if any(banned_kw in title or banned_kw in cleaned_text for banned_kw in BANNED_KEYWORDS):
+                            elem.clear()
+                            root.clear()
+                            continue
+                            
+                        # 2. Focus strictly on our Version 1.0 / Herta keyword anchors
+                        if KEYWORDS.search(title) or KEYWORDS.search(text[:2000]):
+                            # Make sure it actually has text body remaining
+                            if len(cleaned_text) > 100:
+                                data_point = {
+                                    "title": title,
+                                    "content": cleaned_text
+                                }
+                                f.write(json.dumps(data_point, ensure_ascii=False) + "\n")
+                                saved_count += 1
+                    
+                    count += 1
+                    if count % 5000 == 0:
+                        print(f"Processed {count} pages... Saved {saved_count} valid lore targets.")
+                    
+                    # Critical Memory Management: clear the node from RAM
+                    elem.clear()
+                    root.clear()
+    except FileNotFoundError:
+        raise SystemExit(f"XML dump not found: {XML_FILE}") from None
+    except ET.ParseError as exc:
+        line, column = exc.position
+        raise SystemExit(
+            f"Malformed XML dump: {XML_FILE} (line {line}, column {column}). "
+            "The file may be truncated or corrupted."
+        ) from None
+    except OSError as exc:
+        raise SystemExit(f"Unable to read XML dump {XML_FILE}: {exc}") from None
 
     print(f"Done! Saved {saved_count} clean lore files to {OUTPUT_JSONL}")
 
