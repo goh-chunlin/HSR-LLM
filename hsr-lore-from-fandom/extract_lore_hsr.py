@@ -1,19 +1,11 @@
 import xml.etree.ElementTree as ET
 import json
 import re
-import sys
 from typing import Final
 
 # UPDATE THIS to match your exact downloaded filename
 XML_FILE: Final[str] = "honkai_star_rail_pages_current.xml"
 OUTPUT_JSONL: Final[str] = "hsr_v1_raw_lore.jsonl"
-
-# Compile keyword patterns to grab Version 1.0 specific areas/characters
-# We focus tightly on Herta Space Station, Jarilo-VI, and early Luofu/Herta
-KEYWORDS = re.compile(
-    r"(Herta Space Station|Belobog|Jarilo-VI|Cocolia|Bronya|Seele|Sampo|Gepard|Asta|Arlan|Simulated Universe)", 
-    re.IGNORECASE
-)
 
 # Filter out trash pages we do not want to train on
 BANNED_TITLES = [
@@ -134,16 +126,13 @@ def parse_wiki_dump() -> None:
                             root.clear()
                             continue
                             
-                        # 2. Focus strictly on our Version 1.0 / Herta keyword anchors
-                        if KEYWORDS.search(title) or KEYWORDS.search(text[:2000]):
-                            # Make sure it actually has text body remaining
-                            if len(cleaned_text) > 100:
-                                data_point = {
-                                    "title": title,
-                                    "content": cleaned_text
-                                }
-                                f.write(json.dumps(data_point, ensure_ascii=False) + "\n")
-                                saved_count += 1
+                        if len(cleaned_text) > 100:
+                            data_point = {
+                                "title": title,
+                                "content": cleaned_text
+                            }
+                            f.write(json.dumps(data_point, ensure_ascii=False) + "\n")
+                            saved_count += 1
                     
                     count += 1
                     if count % 5000 == 0:
