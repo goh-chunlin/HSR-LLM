@@ -1,11 +1,14 @@
 import json
+import os
 import re
 import xml.etree.ElementTree as ET
 from typing import Final, Iterator, TypedDict
 
 XML_FILE: Final[str] = "honkai_star_rail_pages_current.xml"
 OUTPUT_JSONL: Final[str] = "hsr_v1_raw_lore.jsonl"
-DEBUG_OUTPUT_JSONL: Final[str] = "hsr_v1_debug_pages.jsonl"
+INSPECT_OUTPUT_DIR: Final[str] = "inspect_outputs"
+DEBUG_OUTPUT_JSONL: Final[str] = f"{INSPECT_OUTPUT_DIR}/hsr_v1_debug_pages.jsonl"
+LIMITED_OUTPUT_JSONL: Final[str] = f"{INSPECT_OUTPUT_DIR}/hsr_v1_raw_lore_sample.jsonl"
 
 BANNED_TITLES = [
     "MediaWiki:", "Template:", "Category:", "User:", "File:", "Module:",
@@ -46,6 +49,41 @@ class LorePage(TypedDict):
     title: str
     raw_content: str
     cleaned_content: str
+
+
+def ensure_parent_dir(path: str) -> None:
+    parent_dir = os.path.dirname(path)
+    if parent_dir:
+        os.makedirs(parent_dir, exist_ok=True)
+
+
+def resolve_extract_output_path(limit: int | None, output_path: str | None) -> str:
+    if output_path:
+        return output_path
+
+    if limit is not None:
+        return LIMITED_OUTPUT_JSONL
+
+    return OUTPUT_JSONL
+
+
+def resolve_debug_output_path(output_path: str | None) -> str:
+    return output_path or DEBUG_OUTPUT_JSONL
+
+
+def page_matches_query(page: LorePage, query: str, scope: str) -> bool:
+    normalized_query = query.lower()
+
+    if scope == "title":
+        haystacks = (page["title"],)
+    elif scope == "content":
+        haystacks = (page["cleaned_content"],)
+    elif scope == "raw":
+        haystacks = (page["raw_content"],)
+    else:
+        haystacks = (page["title"], page["cleaned_content"], page["raw_content"])
+
+    return any(normalized_query in haystack.lower() for haystack in haystacks)
 
 
 def strip_nested_templates(text: str) -> str:
@@ -135,8 +173,7 @@ def clean_wikitext(text: str | None, title: str) -> str:
     return text
 
 
-def iter_lore_pages(title_query: str | None = None) -> Iterator[LorePage]:
-    normalized_query = title_query.lower() if title_query else None
+def iter_lore_pages(query: str | None = None, query_scope: str = "title") -> Iterator[LorePage]:
 
     try:
         context = ET.iterparse(XML_FILE, events=('end',))
@@ -170,16 +207,18 @@ def iter_lore_pages(title_query: str | None = None) -> Iterator[LorePage]:
                 root.clear()
                 continue
 
-            if normalized_query and normalized_query not in title.lower():
-                elem.clear()
-                root.clear()
-                continue
-
-            yield {
+            page: LorePage = {
                 "title": title,
                 "raw_content": text,
                 "cleaned_content": cleaned_text,
             }
+
+            if query and not page_matches_query(page, query, query_scope):
+                elem.clear()
+                root.clear()
+                continue
+
+            yield page
 
             elem.clear()
             root.clear()
@@ -195,11 +234,14 @@ def iter_lore_pages(title_query: str | None = None) -> Iterator[LorePage]:
         raise SystemExit(f"Unable to read XML dump {XML_FILE}: {exc}") from None
 
 
-def write_clean_lore_jsonl(limit: int | None = None, output_path: str = OUTPUT_JSONL) -> None:
+def write_clean_lore_jsonl(limit: int | None = None, output_path: str | None = None) -> None:
     print("Initializing streaming parser... (Grab a coffee, this takes < 60 seconds)")
 
+    resolved_output_path = resolve_extract_output_path(limit=limit, output_path=output_path)
+    ensure_parent_dir(resolved_output_path)
+
     saved_count = 0
-    with open(output_path, 'w', encoding='utf-8') as output_file:
+    with open(resolved_output_path, 'w', encoding='utf-8') as output_file:
         for page in iter_lore_pages():
             data_point = {
                 "title": page["title"],
@@ -214,15 +256,23 @@ def write_clean_lore_jsonl(limit: int | None = None, output_path: str = OUTPUT_J
             if limit is not None and saved_count >= limit:
                 break
 
-    print(f"Done! Saved {saved_count} clean lore files to {output_path}")
+    print(f"Done! Saved {saved_count} clean lore files to {resolved_output_path}")
 
 
-def write_debug_pages(title_query: str, limit: int, output_path: str = DEBUG_OUTPUT_JSONL) -> None:
-    print(f"Exporting up to {limit} matching lore pages for title query: {title_query}")
+def write_debug_pages(
+    query: str,
+    limit: int,
+    output_path: str | None = None,
+    query_scope: str = "title",
+) -> None:
+    resolved_output_path = resolve_debug_output_path(output_path)
+    ensure_parent_dir(resolved_output_path)
+
+    print(f"Exporting up to {limit} matching lore pages for {query_scope} query: {query}")
 
     saved_count = 0
-    with open(output_path, 'w', encoding='utf-8') as output_file:
-        for page in iter_lore_pages(title_query=title_query):
+    with open(resolved_output_path, 'w', encoding='utf-8') as output_file:
+        for page in iter_lore_pages(query=query, query_scope=query_scope):
             debug_record = {
                 "title": page["title"],
                 "raw_content": page["raw_content"],
@@ -234,4 +284,4 @@ def write_debug_pages(title_query: str, limit: int, output_path: str = DEBUG_OUT
             if saved_count >= limit:
                 break
 
-    print(f"Done! Saved {saved_count} matching debug pages to {output_path}")
+    print(f"Done! Saved {saved_count} matching debug pages to {resolved_output_path}")

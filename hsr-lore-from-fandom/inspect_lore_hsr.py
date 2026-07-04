@@ -8,9 +8,15 @@ def parse_args() -> argparse.Namespace:
         description="Export compact raw vs cleaned lore snapshots for debugging."
     )
     parser.add_argument(
-        "--inspect-title",
+        "--query",
         required=True,
-        help="Export only pages whose title contains this text.",
+        help="Export pages whose title or content contains this text.",
+    )
+    parser.add_argument(
+        "--query-scope",
+        choices=["title", "content", "raw", "any"],
+        default="content",
+        help="Choose whether to search page titles, cleaned content, raw wiki text, or any of them.",
     )
     parser.add_argument(
         "--limit",
@@ -20,8 +26,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--debug-output",
-        default=DEBUG_OUTPUT_JSONL,
-        help="Output JSONL path for raw and cleaned debug pages.",
+        help=(
+            "Output JSONL path for raw and cleaned debug pages. "
+            f"Defaults to {DEBUG_OUTPUT_JSONL}."
+        ),
     )
     return parser.parse_args()
 
@@ -33,7 +41,8 @@ if __name__ == "__main__":
         raise SystemExit("--limit must be a positive integer.")
 
     write_debug_pages(
-        title_query=args.inspect_title,
+        query=args.query,
         limit=args.limit,
         output_path=args.debug_output,
+        query_scope=args.query_scope,
     )

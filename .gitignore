@@ -13,3 +13,6 @@ build/
 # MLX / training artifacts — generated outputs, reproducible from training data
 adapters/
 *.gguf
+
+# Lore inspection scratch outputs
+hsr-lore-from-fandom/inspect_outputs/

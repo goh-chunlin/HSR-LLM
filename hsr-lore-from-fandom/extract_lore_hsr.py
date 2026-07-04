@@ -13,8 +13,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--output",
-        default=OUTPUT_JSONL,
-        help="Output JSONL path for the cleaned lore extraction.",
+        help=(
+            "Output JSONL path for the cleaned lore extraction. "
+            f"Defaults to {OUTPUT_JSONL}, or to inspect_outputs when --limit is used."
+        ),
     )
     return parser.parse_args()
 
