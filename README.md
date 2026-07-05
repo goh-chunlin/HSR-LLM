@@ -7,8 +7,8 @@ Two parallel tracks for building a Herta-persona language model.
 A Gradio web app deployed to Hugging Face Spaces. Retrieves HSR lore using a
 hybrid BM25 + FAISS pipeline and synthesises answers with Llama 3.1 8B Instruct.
 
-**Runtime files** (tracked via Git LFS):
-- `hsr_v1_chunks.json` — 22 k text chunks from the HSR Fandom wiki
+**Runtime files** (built on CI/CD pipeline `.github/workflows/refresh_lore_and_sync_space.yml`):
+- `hsr_v1_chunks.json` — text chunks from the HSR Fandom wiki
 - `my_hsr_1.0_index.faiss` — pre-built dense vector index
 
 **Build-time scripts** (run locally, outputs committed via LFS):

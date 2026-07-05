@@ -86,6 +86,24 @@ def page_matches_query(page: LorePage, query: str, scope: str) -> bool:
     return any(normalized_query in haystack.lower() for haystack in haystacks)
 
 
+def extract_description_templates(text: str) -> str:
+    """Extract Description template content and preserve it as plain text."""
+    descriptions: list[str] = []
+    
+    # Match {{Description|...}} templates (handles nested content)
+    pattern = r'\{\{Description\s*\|\s*([^}]*(?:\}(?!\}))?[^}]*)\}\}'
+    for match in re.finditer(pattern, text, re.IGNORECASE):
+        desc = match.group(1).strip()
+        if desc:
+            descriptions.append(desc)
+    
+    if descriptions:
+        # Prepend descriptions to preserve key info
+        text = '\n\n'.join(descriptions) + '\n\n' + text
+    
+    return text
+
+
 def strip_nested_templates(text: str) -> str:
     previous = ""
     while text != previous:
@@ -153,6 +171,9 @@ def clean_wikitext(text: str | None, title: str) -> str:
     text = re.sub(r'https?://\S+', '', text)
     text = re.sub(r'(?i)[\w\s-]+\.(png|jpg|jpeg|gif|webm|mp4)(\s*\|.*)?', '', text)
     text = re.sub(r'^\s*\[\[[a-z-]+:[^\]]+\]\]\s*$', '', text, flags=re.MULTILINE | re.IGNORECASE)
+    
+    text = extract_description_templates(text)
+    
     text = strip_nested_templates(text)
     text = re.sub(r'^\s*\{\{.*$', '', text, flags=re.MULTILINE)
     text = re.sub(r'\{\{[^\|\}]+\|?', '', text)
