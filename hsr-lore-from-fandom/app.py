@@ -74,6 +74,8 @@ def _initialize_runtime() -> None:
         if index.ntotal != len(text_metadata):
             print(f"[CRITICAL WARNING] Row count mismatch! FAISS ({index.ntotal}) != JSON ({len(text_metadata)})")
 
+        # TODO: Optimize BM25 startup by precomputing/storing 
+        # tokenized corpus or lazy-building BM25 separately.
         print("Tokenizing entire corpus for BM25...")
         tokenized_corpus = [tokenize_text(chunk.get("text", "")) for chunk in text_metadata]
         bm25 = BM25Okapi(tokenized_corpus, k1=2.0, b=0.75)
