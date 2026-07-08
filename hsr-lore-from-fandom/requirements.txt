@@ -4,4 +4,4 @@ numpy
 rank-bm25
 nltk
 huggingface-hub
-gradio<6
+gradio
