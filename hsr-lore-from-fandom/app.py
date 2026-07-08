@@ -378,7 +378,8 @@ demo = ui.Interface(
     fn=hsr_rag_interface,
     inputs=ui.Textbox(
         label="Ask a Honkai: Star Rail Lore Question",
-        placeholder="Who is Member 83 in Genius Society?"
+        placeholder="Who is Member 83 in Genius Society?",
+        max_length=_MAX_USER_QUERY_CHARS,
     ),
     outputs=ui.Markdown(),
     title="🌌 Honkai: Star Rail Lore RAG Engine",
