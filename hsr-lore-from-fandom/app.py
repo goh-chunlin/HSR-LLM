@@ -62,6 +62,25 @@ _QUERY_STOPWORDS = frozenset({
     'total', 'many', 'much', 'some', 'any', 'no',
 })
 
+_MAX_USER_QUERY_CHARS = 1200
+
+
+def _normalize_user_query(query: str, max_chars: int = _MAX_USER_QUERY_CHARS) -> str:
+    """
+    Apply lightweight normalization without changing user intent:
+    - trim edge whitespace
+    - normalize line endings
+    - collapse repeated spaces/tabs
+    - cap maximum length for stability/cost
+    """
+    text = str(query).strip()
+    text = re.sub(r'\r\n?', '\n', text)
+    text = re.sub(r'[ \t\f\v]+', ' ', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    if len(text) > max_chars:
+        text = text[:max_chars].rstrip()
+    return text
+
 
 def _extract_context_pairs(query: str) -> list[tuple[str, str]]:
     """
@@ -274,14 +293,18 @@ def generate_answer(query: str, retrieved_chunks: list[dict[str, Any]]) -> str:
         return f"Error generating answer: {str(e)}"
 
 def hsr_rag_interface(user_query: str) -> str:
+    normalized_query = _normalize_user_query(user_query)
+    if not normalized_query:
+        return "### Please enter a lore question."
+
     # Step 1: Retrieve relevant background chunks
-    matches = retrieve_lore_hybrid(user_query, top_k=2)
+    matches = retrieve_lore_hybrid(normalized_query, top_k=2)
     
     if not matches:
         return "### I couldn't find any documents matching that query."
         
     # Step 2: Generate the "to the point" conversational reply
-    ai_response = generate_answer(user_query, matches)
+    ai_response = generate_answer(normalized_query, matches)
     
     # Step 3: Combine them for a clean UI (Answer first, Sources at the bottom)
     final_output = f"## 💬 Answer\n{ai_response}\n\n"
@@ -294,10 +317,18 @@ def hsr_rag_interface(user_query: str) -> str:
 # Build the simple Gradio layout
 demo = ui.Interface(
     fn=hsr_rag_interface,
-    inputs=ui.Textbox(label="Ask a Honkai: Star Rail Lore Question", placeholder="Who is Member 83 in Genius Society?"),
+    inputs=ui.Textbox(
+        label="Ask a Honkai: Star Rail Lore Question",
+        placeholder="Who is Member 83 in Genius Society?",
+        max_length=_MAX_USER_QUERY_CHARS,
+        info=f"Maximum {_MAX_USER_QUERY_CHARS} characters."
+    ),
     outputs=ui.Markdown(),
     title="🌌 Honkai: Star Rail Lore RAG Engine",
-    description="Hybrid retrieval backend combining BM25 keyword matching and FAISS dense vector embeddings.",
+    description=(
+        "Hybrid retrieval backend combining BM25 keyword matching and FAISS dense vector embeddings. "
+        f"Input is limited to {_MAX_USER_QUERY_CHARS} characters."
+    ),
     theme="soft"
 )
 
