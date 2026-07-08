@@ -4,28 +4,30 @@ os.environ["OMP_NUM_THREADS"] = "1"
 import html
 import json
 import re
-import faiss
-import numpy as np
 from typing import Any, cast
-from sentence_transformers import SentenceTransformer
-from rank_bm25 import BM25Okapi  # type: ignore[import-untyped]
-from nltk.stem import PorterStemmer  # type: ignore[import-untyped]
 import huggingface_hub as hf
 import gradio as ui
+
+print("=== APP MODULE IMPORT START ===")
 
 _INDEX_PATH = "my_hsr_1.0_index.faiss"
 _CHUNKS_PATH = "hsr_v1_chunks.json"
 
 init_error: str | None = None
-embed_model: SentenceTransformer | None = None
+embed_model: Any | None = None
 index: Any | None = None
 text_metadata: list[dict[str, Any]] = []
-bm25: BM25Okapi | None = None
+bm25: Any | None = None
 runtime_ready = False
 
-stemmer = PorterStemmer()
+stemmer: Any | None = None
 
 def tokenize_text(text: str) -> list[str]:
+    global stemmer
+    if stemmer is None:
+        from nltk.stem import PorterStemmer  # type: ignore[import-untyped]
+        stemmer = PorterStemmer()
+
     clean = re.sub(r'[#\?!\.,:;\(\)\[\]"\'\-\/]', ' ', text.lower())
     tokens: list[str] = []
     for token in clean.split():
@@ -41,6 +43,10 @@ def _initialize_runtime() -> None:
         return
 
     try:
+        import faiss
+        from sentence_transformers import SentenceTransformer
+        from rank_bm25 import BM25Okapi  # type: ignore[import-untyped]
+
         print("=== DEBUGGING INITIALIZATION ===")
         print("Loading sentence-transformers/all-MiniLM-L6-v2...")
         embed_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
@@ -179,6 +185,9 @@ def _digit_in_context(text: str, keyword: str, digit: str) -> int | None:
 def retrieve_lore_hybrid(query: str, top_k: int = 3) -> list[dict[str, Any]]:
     if not runtime_ready or init_error is not None or embed_model is None or index is None or bm25 is None:
         return []
+
+    import faiss
+    import numpy as np
 
     assert embed_model is not None
     assert index is not None
@@ -378,6 +387,9 @@ demo = ui.Interface(
     theme="soft"
 )
 
+print("=== GRADIO INTERFACE READY ===")
+
 if __name__ == "__main__":
     # Hugging Face Spaces looks for a running web server on port 7860 by default
+    print("=== LAUNCHING GRADIO APP ===")
     demo.launch(server_name="0.0.0.0", server_port=7860)
