@@ -13,21 +13,14 @@ from nltk.stem import PorterStemmer  # type: ignore[import-untyped]
 import huggingface_hub as hf
 import gradio as ui
 
-print("=== DEBUGGING INITIALIZATION ===")
-print("Loading sentence-transformers/all-MiniLM-L6-v2...")
-embed_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+_INDEX_PATH = "my_hsr_1.0_index.faiss"
+_CHUNKS_PATH = "hsr_v1_chunks.json"
 
-print("Reading FAISS Index...")
-index = faiss.read_index("my_hsr_1.0_index.faiss")
-print(f"-> FAISS index contains {index.ntotal} vectors.")
-
-print("Reading JSON metadata chunks...")
-with open("hsr_v1_chunks.json", "r", encoding="utf-8") as f:
-    text_metadata = json.load(f)
-print(f"-> Metadata contains {len(text_metadata)} records.")
-
-if index.ntotal != len(text_metadata):
-    print(f"[CRITICAL WARNING] Row count mismatch! FAISS ({index.ntotal}) != JSON ({len(text_metadata)})")
+init_error: str | None = None
+embed_model: SentenceTransformer | None = None
+index: Any | None = None
+text_metadata: list[dict[str, Any]] = []
+bm25: BM25Okapi | None = None
 
 stemmer = PorterStemmer()
 
@@ -40,10 +33,47 @@ def tokenize_text(text: str) -> list[str]:
             tokens.append(cast(str, stemmer.stem(token_strip)))  # type: ignore[reportUnknownMemberType]
     return tokens
 
-print("Tokenizing entire corpus for BM25...")
-tokenized_corpus = [tokenize_text(chunk["text"]) for chunk in text_metadata]
-bm25 = BM25Okapi(tokenized_corpus, k1=2.0, b=0.75)
-print("-> BM25 Initialization complete.")
+def _initialize_runtime() -> None:
+    global init_error, embed_model, index, text_metadata, bm25
+
+    try:
+        print("=== DEBUGGING INITIALIZATION ===")
+        print("Loading sentence-transformers/all-MiniLM-L6-v2...")
+        embed_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+
+        if not os.path.isfile(_INDEX_PATH):
+            raise FileNotFoundError(f"Missing required artifact: {_INDEX_PATH}")
+
+        print("Reading FAISS Index...")
+        index = faiss.read_index(_INDEX_PATH)
+        print(f"-> FAISS index contains {index.ntotal} vectors.")
+
+        if not os.path.isfile(_CHUNKS_PATH):
+            raise FileNotFoundError(f"Missing required artifact: {_CHUNKS_PATH}")
+
+        print("Reading JSON metadata chunks...")
+        with open(_CHUNKS_PATH, "r", encoding="utf-8") as f:
+            loaded_chunks = json.load(f)
+
+        if not isinstance(loaded_chunks, list):
+            raise RuntimeError(f"Invalid metadata format in {_CHUNKS_PATH}: expected list")
+
+        text_metadata = cast(list[dict[str, Any]], loaded_chunks)
+        print(f"-> Metadata contains {len(text_metadata)} records.")
+
+        if index.ntotal != len(text_metadata):
+            print(f"[CRITICAL WARNING] Row count mismatch! FAISS ({index.ntotal}) != JSON ({len(text_metadata)})")
+
+        print("Tokenizing entire corpus for BM25...")
+        tokenized_corpus = [tokenize_text(chunk.get("text", "")) for chunk in text_metadata]
+        bm25 = BM25Okapi(tokenized_corpus, k1=2.0, b=0.75)
+        print("-> BM25 Initialization complete.")
+    except Exception as e:
+        init_error = str(e)
+        print(f"[STARTUP ERROR] {init_error}")
+
+
+_initialize_runtime()
 
 # ---------------------------------------------------------------------------
 # Query context extraction — generalized for any "keyword digit" pattern
@@ -145,6 +175,13 @@ def _digit_in_context(text: str, keyword: str, digit: str) -> int | None:
     return None
 
 def retrieve_lore_hybrid(query: str, top_k: int = 3) -> list[dict[str, Any]]:
+    if init_error is not None or embed_model is None or index is None or bm25 is None:
+        return []
+
+    assert embed_model is not None
+    assert index is not None
+    assert bm25 is not None
+
     query_tokens = tokenize_text(query)
     
     # Extract raw digits directly from the original string (e.g., "83")
@@ -293,6 +330,13 @@ def generate_answer(query: str, retrieved_chunks: list[dict[str, Any]]) -> str:
         return f"Error generating answer: {str(e)}"
 
 def hsr_rag_interface(user_query: str) -> str:
+    if init_error is not None:
+        return (
+            "### Runtime initialization failed.\n"
+            "Required artifacts may be missing in this deployment.\n\n"
+            f"**Error:** `{init_error}`"
+        )
+
     normalized_query = _normalize_user_query(user_query)
     if not normalized_query:
         return "### Please enter a lore question."

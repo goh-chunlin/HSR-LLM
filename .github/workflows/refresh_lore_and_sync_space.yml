@@ -7,6 +7,9 @@ concurrency:
   group: refresh-lore-space-sync
   cancel-in-progress: false
 
+permissions:
+  contents: write
+
 jobs:
   refresh-and-sync:
     runs-on: ubuntu-latest
@@ -76,7 +79,12 @@ jobs:
       - name: Create ephemeral commit
         if: steps.detect_changes.outputs.changed == 'true'
         run: |
-          git commit -m "chore: manual lore refresh [skip ci]"
+          git commit -m "chore: refresh lore artifacts"
+
+      - name: Push refreshed artifacts to main branch
+        if: steps.detect_changes.outputs.changed == 'true'
+        run: |
+          git push origin HEAD:main
 
       - name: Push updated artifacts to Hugging Face Space
         if: steps.detect_changes.outputs.changed == 'true'
