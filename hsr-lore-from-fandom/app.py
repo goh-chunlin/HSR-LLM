@@ -385,12 +385,13 @@ demo = ui.Interface(
     inputs=ui.Textbox(
         label="Ask a Honkai: Star Rail Lore Question",
         placeholder="Who is Member 83 in Genius Society?",
+        max_length=_MAX_USER_QUERY_CHARS,
+        info=f"Input is limited to {_MAX_USER_QUERY_CHARS} characters.",
     ),
     outputs=ui.Markdown(),
     title="🌌 Honkai: Star Rail Lore RAG Engine",
     description=(
         "Hybrid retrieval backend combining BM25 keyword matching and FAISS dense vector embeddings. "
-        f"Input is limited to {_MAX_USER_QUERY_CHARS} characters."
     )
 )
 
@@ -399,4 +400,4 @@ print("=== GRADIO INTERFACE READY ===", flush=True)
 if __name__ == "__main__":
     # Hugging Face Spaces looks for a running web server on port 7860 by default
     print("=== LAUNCHING GRADIO APP ===", flush=True)
-    demo.launch(server_name="0.0.0.0", server_port=7860)
+    demo.launch(theme="glass")
