@@ -1,6 +1,7 @@
 import os
 os.environ["OMP_NUM_THREADS"] = "1"
 
+import html
 import json
 import re
 import faiss
@@ -216,12 +217,16 @@ def generate_answer(query: str, retrieved_chunks: list[dict[str, Any]]) -> str:
     asks an LLM to synthesize a direct, accurate answer.
     """
     # 1. Format retrieved context as a clearly delimited data block.
+    # Escape untrusted text so user/content cannot break prompt delimiters.
+    safe_query = html.escape(str(query), quote=False)
     context_lines: list[str] = []
     for match in retrieved_chunks:
+        safe_title = html.escape(str(match.get("title", "")), quote=False)
+        safe_text = html.escape(str(match.get("text", "")), quote=False)
         context_lines.append(
             f"<source_document>\n"
-            f"<title>{match['title']}</title>\n"
-            f"<content>{match['text']}</content>\n"
+            f"<title>{safe_title}</title>\n"
+            f"<content>{safe_text}</content>\n"
             f"</source_document>"
         )
     context_str = "\n".join(context_lines)
@@ -243,7 +248,7 @@ def generate_answer(query: str, retrieved_chunks: list[dict[str, Any]]) -> str:
         f"{context_str}\n"
         "</retrieved_knowledge>\n\n"
         "<user_question>\n"
-        f"{query}\n"
+        f"{safe_query}\n"
         "</user_question>\n\n"
         "Provide the best grounded answer."
     )
