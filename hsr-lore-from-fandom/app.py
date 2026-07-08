@@ -21,6 +21,7 @@ embed_model: SentenceTransformer | None = None
 index: Any | None = None
 text_metadata: list[dict[str, Any]] = []
 bm25: BM25Okapi | None = None
+runtime_ready = False
 
 stemmer = PorterStemmer()
 
@@ -34,7 +35,10 @@ def tokenize_text(text: str) -> list[str]:
     return tokens
 
 def _initialize_runtime() -> None:
-    global init_error, embed_model, index, text_metadata, bm25
+    global init_error, embed_model, index, text_metadata, bm25, runtime_ready
+
+    if runtime_ready or init_error is not None:
+        return
 
     try:
         print("=== DEBUGGING INITIALIZATION ===")
@@ -68,12 +72,10 @@ def _initialize_runtime() -> None:
         tokenized_corpus = [tokenize_text(chunk.get("text", "")) for chunk in text_metadata]
         bm25 = BM25Okapi(tokenized_corpus, k1=2.0, b=0.75)
         print("-> BM25 Initialization complete.")
+        runtime_ready = True
     except Exception as e:
         init_error = str(e)
         print(f"[STARTUP ERROR] {init_error}")
-
-
-_initialize_runtime()
 
 # ---------------------------------------------------------------------------
 # Query context extraction — generalized for any "keyword digit" pattern
@@ -175,7 +177,7 @@ def _digit_in_context(text: str, keyword: str, digit: str) -> int | None:
     return None
 
 def retrieve_lore_hybrid(query: str, top_k: int = 3) -> list[dict[str, Any]]:
-    if init_error is not None or embed_model is None or index is None or bm25 is None:
+    if not runtime_ready or init_error is not None or embed_model is None or index is None or bm25 is None:
         return []
 
     assert embed_model is not None
@@ -330,6 +332,8 @@ def generate_answer(query: str, retrieved_chunks: list[dict[str, Any]]) -> str:
         return f"Error generating answer: {str(e)}"
 
 def hsr_rag_interface(user_query: str) -> str:
+    _initialize_runtime()
+
     if init_error is not None:
         return (
             "### Runtime initialization failed.\n"
