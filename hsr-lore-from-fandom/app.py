@@ -1,14 +1,18 @@
 import os
 os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["PYTHONUNBUFFERED"] = "1"
+
+print("=== APP BOOT: pre-import ===", flush=True)
 
 import html
 import json
 import re
 from typing import Any, cast
-import huggingface_hub as hf
+print("=== APP BOOT: importing gradio ===", flush=True)
 import gradio as ui
+print("=== APP BOOT: gradio imported ===", flush=True)
 
-print("=== APP MODULE IMPORT START ===")
+print("=== APP MODULE IMPORT START ===", flush=True)
 
 _INDEX_PATH = "my_hsr_1.0_index.faiss"
 _CHUNKS_PATH = "hsr_v1_chunks.json"
@@ -47,21 +51,21 @@ def _initialize_runtime() -> None:
         from sentence_transformers import SentenceTransformer
         from rank_bm25 import BM25Okapi  # type: ignore[import-untyped]
 
-        print("=== DEBUGGING INITIALIZATION ===")
-        print("Loading sentence-transformers/all-MiniLM-L6-v2...")
+        print("=== DEBUGGING INITIALIZATION ===", flush=True)
+        print("Loading sentence-transformers/all-MiniLM-L6-v2...", flush=True)
         embed_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
 
         if not os.path.isfile(_INDEX_PATH):
             raise FileNotFoundError(f"Missing required artifact: {_INDEX_PATH}")
 
-        print("Reading FAISS Index...")
+        print("Reading FAISS Index...", flush=True)
         index = faiss.read_index(_INDEX_PATH)
-        print(f"-> FAISS index contains {index.ntotal} vectors.")
+        print(f"-> FAISS index contains {index.ntotal} vectors.", flush=True)
 
         if not os.path.isfile(_CHUNKS_PATH):
             raise FileNotFoundError(f"Missing required artifact: {_CHUNKS_PATH}")
 
-        print("Reading JSON metadata chunks...")
+        print("Reading JSON metadata chunks...", flush=True)
         with open(_CHUNKS_PATH, "r", encoding="utf-8") as f:
             loaded_chunks = json.load(f)
 
@@ -69,21 +73,21 @@ def _initialize_runtime() -> None:
             raise RuntimeError(f"Invalid metadata format in {_CHUNKS_PATH}: expected list")
 
         text_metadata = cast(list[dict[str, Any]], loaded_chunks)
-        print(f"-> Metadata contains {len(text_metadata)} records.")
+        print(f"-> Metadata contains {len(text_metadata)} records.", flush=True)
 
         if index.ntotal != len(text_metadata):
-            print(f"[CRITICAL WARNING] Row count mismatch! FAISS ({index.ntotal}) != JSON ({len(text_metadata)})")
+            print(f"[CRITICAL WARNING] Row count mismatch! FAISS ({index.ntotal}) != JSON ({len(text_metadata)})", flush=True)
 
         # TODO: Optimize BM25 startup by precomputing/storing 
         # tokenized corpus or lazy-building BM25 separately.
-        print("Tokenizing entire corpus for BM25...")
+        print("Tokenizing entire corpus for BM25...", flush=True)
         tokenized_corpus = [tokenize_text(chunk.get("text", "")) for chunk in text_metadata]
         bm25 = BM25Okapi(tokenized_corpus, k1=2.0, b=0.75)
-        print("-> BM25 Initialization complete.")
+        print("-> BM25 Initialization complete.", flush=True)
         runtime_ready = True
     except Exception as e:
         init_error = str(e)
-        print(f"[STARTUP ERROR] {init_error}")
+        print(f"[STARTUP ERROR] {init_error}", flush=True)
 
 # ---------------------------------------------------------------------------
 # Query context extraction — generalized for any "keyword digit" pattern
@@ -328,6 +332,8 @@ def generate_answer(query: str, retrieved_chunks: list[dict[str, Any]]) -> str:
     # tokens and will produce garbage output from Llama 3.1.
     # Requires HF_TOKEN set as a Space secret (Settings → Variables and secrets).
     try:
+        import huggingface_hub as hf
+
         client = hf.InferenceClient("meta-llama/Llama-3.1-8B-Instruct")
         response = client.chat_completion(  # type: ignore[call-overload]
             messages=[
@@ -388,9 +394,9 @@ demo = ui.Interface(
     )
 )
 
-print("=== GRADIO INTERFACE READY ===")
+print("=== GRADIO INTERFACE READY ===", flush=True)
 
 if __name__ == "__main__":
     # Hugging Face Spaces looks for a running web server on port 7860 by default
-    print("=== LAUNCHING GRADIO APP ===")
+    print("=== LAUNCHING GRADIO APP ===", flush=True)
     demo.launch(server_name="0.0.0.0", server_port=7860)
