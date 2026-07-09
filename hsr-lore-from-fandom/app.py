@@ -16,6 +16,7 @@ print("=== APP MODULE IMPORT START ===", flush=True)
 
 _INDEX_PATH = "my_hsr_1.0_index.faiss"
 _CHUNKS_PATH = "hsr_v1_chunks.json"
+_RUNTIME_INIT_MODE = os.getenv("HSR_RUNTIME_INIT_MODE", "lazy").strip().lower()
 
 init_error: str | None = None
 embed_model: Any | None = None
@@ -25,6 +26,17 @@ bm25: Any | None = None
 runtime_ready = False
 
 stemmer: Any | None = None
+
+
+def _should_eager_initialize() -> bool:
+    if _RUNTIME_INIT_MODE in {"eager", "lazy"}:
+        return _RUNTIME_INIT_MODE == "eager"
+
+    print(
+        f"[STARTUP WARNING] Invalid HSR_RUNTIME_INIT_MODE={_RUNTIME_INIT_MODE!r}; defaulting to lazy.",
+        flush=True,
+    )
+    return False
 
 def tokenize_text(text: str) -> list[str]:
     global stemmer
@@ -88,6 +100,12 @@ def _initialize_runtime() -> None:
     except Exception as e:
         init_error = str(e)
         print(f"[STARTUP ERROR] {init_error}", flush=True)
+
+
+def _maybe_initialize_runtime_at_launch() -> None:
+    if _should_eager_initialize():
+        print("=== EAGER RUNTIME INITIALIZATION ENABLED ===", flush=True)
+        _initialize_runtime()
 
 # ---------------------------------------------------------------------------
 # Query context extraction — generalized for any "keyword digit" pattern
@@ -401,4 +419,5 @@ print("=== GRADIO INTERFACE READY ===", flush=True)
 if __name__ == "__main__":
     # Hugging Face Spaces looks for a running web server on port 7860 by default
     print("=== LAUNCHING GRADIO APP ===", flush=True)
+    _maybe_initialize_runtime_at_launch()
     demo.launch(theme="soft")

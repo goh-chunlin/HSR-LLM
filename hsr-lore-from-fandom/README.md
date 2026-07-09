@@ -12,6 +12,14 @@ Ask any Honkai: Star Rail lore question and get a cited answer.
 
 Powered by a hybrid BM25 + FAISS retrieval pipeline over 22k chunks from the HSR Fandom wiki, with answers synthesised by Llama 3.1 8B Instruct.
 
+## Runtime Initialization
+
+The app defaults to lazy initialization, which keeps startup faster but makes the first query pay the full model/index/BM25 warmup cost.
+
+Set `HSR_RUNTIME_INIT_MODE=eager` to initialize the runtime at app launch instead. This is usually better when you want the first user request to respond faster.
+
+Set `HSR_RUNTIME_INIT_MODE=lazy` to keep the current behavior.
+
 ## Smaller Debug Workflows
 
 The XML wiki dump is large enough that it should not be your debugging unit. Use the extractor to create compact JSONL artifacts instead.
