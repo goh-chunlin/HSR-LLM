@@ -43,7 +43,7 @@ def hsr_rag_interface(user_query: str, runtime: RuntimeState) -> str:
             span.set_attribute("app.query.normalized_length", len(normalized_query))
 
             with _tracer.start_as_current_span("retrieve_lore_hybrid") as retrieval_span:
-                matches = retrieve_lore_hybrid(normalized_query, runtime=runtime, top_k=2)
+                matches = retrieve_lore_hybrid(normalized_query, runtime=runtime, top_k=4)
                 retrieval_span.set_attribute("app.retrieval.matches", len(matches))
 
             if not matches:
