@@ -9,9 +9,8 @@ from observability import (
     tracer as _tracer,
 )
 from rag_generation import generate_answer
-from rag_retrieval import normalize_user_query, retrieve_lore_hybrid
+from rag_retrieval import normalize_user_query, retrieve_lore_hybrid, MAX_USER_QUERY_CHARS
 from rag_runtime import RuntimeState
-
 
 def hsr_rag_interface(user_query: str, runtime: RuntimeState) -> str:
     request_started = time.perf_counter()
@@ -23,7 +22,7 @@ def hsr_rag_interface(user_query: str, runtime: RuntimeState) -> str:
         span.set_attribute("app.query.length", len(raw_query))
         span.set_attribute("app.query.sha256", _fingerprint_text(raw_query))
         if _OTEL_CAPTURE_CONTENT:
-            span.set_attribute("app.query.preview", raw_query[:500])
+            span.set_attribute("app.query.preview", raw_query[:MAX_USER_QUERY_CHARS])
 
         try:
             runtime.initialize()
