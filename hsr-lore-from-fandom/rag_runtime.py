@@ -90,7 +90,16 @@ class RuntimeState:
                 )
 
             print("Tokenizing entire corpus for BM25...", flush=True)
-            tokenized_corpus = [tokenize_text(chunk.get("text", "")) for chunk in self.text_metadata]
+            tokenized_corpus = [
+                tokenize_text(f"{title} {text}")
+                for chunk in self.text_metadata
+                for title, text in [
+                    (
+                        chunk.get("title", ""),
+                        chunk.get("text", ""),
+                    )
+                ]
+            ]
             self.bm25 = BM25Okapi(tokenized_corpus, k1=2.0, b=0.75)
             print("-> BM25 Initialization complete.", flush=True)
             self.runtime_ready = True

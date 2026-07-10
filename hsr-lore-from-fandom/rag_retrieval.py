@@ -149,6 +149,31 @@ def _digit_in_context(text: str, keyword: str, digit: str) -> int | None:
     return None
 
 
+def _normalize_title_text(text: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[^\w\s]+", " ", text.lower())).strip()
+
+
+def _title_match_bonus(query: str, title: str) -> float:
+    normalized_query = _normalize_title_text(query)
+    normalized_title = _normalize_title_text(title)
+
+    if not normalized_query or not normalized_title:
+        return 0.0
+
+    if normalized_title == normalized_query:
+        return 0.6
+
+    if normalized_title in normalized_query:
+        return 0.45
+
+    query_tokens = set(normalized_query.split())
+    title_tokens = normalized_title.split()
+    if title_tokens and all(token in query_tokens for token in title_tokens):
+        return 0.3
+
+    return 0.0
+
+
 def retrieve_lore_hybrid(
     query: str,
     runtime: RuntimeState,
@@ -192,6 +217,10 @@ def retrieve_lore_hybrid(
     for idx, total_score in combined_scores.items():
         raw_text = str(runtime.text_metadata[idx].get("text", "")).lower()
         title = str(runtime.text_metadata[idx].get("title", "")).lower()
+        title_bonus = _title_match_bonus(query, title)
+
+        if title_bonus > 0:
+            total_score += title_bonus
 
         if query_context_pairs:
             combined_text = raw_text + " " + title
