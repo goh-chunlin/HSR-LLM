@@ -21,7 +21,7 @@ def setup_observability() -> tuple[Tracer, Counter, Histogram, Histogram]:
     """
     resource = Resource.create({
         "service.name": os.getenv("OTEL_SERVICE_NAME", "hsr-lore-rag-space"),
-        "service.version": os.getenv("SPACE_BUILD_VERSION", "unknown"),
+        "service.version": os.getenv("SPACE_ID", "unknown"),
         "deployment.environment": os.getenv("OTEL_ENV", "prod"),
     })
 
