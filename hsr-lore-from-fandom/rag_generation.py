@@ -1,8 +1,17 @@
 import html
+import re
 from contextlib import nullcontext
 from typing import Any
 
 from rag_types import RetrievedChunk
+
+
+def _strip_retrieval_markup(text: str) -> str:
+    cleaned = re.sub(r"</?(?:source_document|retrieved_knowledge|user_question)>", "", text)
+    cleaned = re.sub(r"</?(?:title|content)>", "", cleaned)
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned.strip()
 
 
 def generate_answer(
@@ -62,7 +71,7 @@ def generate_answer(
                 temperature=0.1,
             )
             content = response.choices[0].message.content
-            final_content = content.strip() if content is not None else ""
+            final_content = _strip_retrieval_markup(content or "")
             if span is not None:
                 span.set_attribute("app.answer.length", len(final_content))
             return final_content
