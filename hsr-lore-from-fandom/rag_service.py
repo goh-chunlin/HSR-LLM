@@ -1,5 +1,4 @@
 import time
-from contextlib import nullcontext
 
 from observability import (
     OTEL_CAPTURE_CONTENT as _OTEL_CAPTURE_CONTENT,
@@ -19,14 +18,12 @@ def hsr_rag_interface(user_query: str, runtime: RuntimeState) -> str:
     request_status = "unknown"
     answer_len = 0
 
-    span_ctx = _tracer.start_as_current_span("hsr_rag_interface") if _tracer is not None else nullcontext()
-    with span_ctx as span:
-        if span is not None:
-            raw_query = str(user_query or "")
-            span.set_attribute("app.query.length", len(raw_query))
-            span.set_attribute("app.query.sha256", _fingerprint_text(raw_query))
-            if _OTEL_CAPTURE_CONTENT:
-                span.set_attribute("app.query.preview", raw_query[:500])
+    with _tracer.start_as_current_span("hsr_rag_interface") as span:
+        raw_query = str(user_query or "")
+        span.set_attribute("app.query.length", len(raw_query))
+        span.set_attribute("app.query.sha256", _fingerprint_text(raw_query))
+        if _OTEL_CAPTURE_CONTENT:
+            span.set_attribute("app.query.preview", raw_query[:500])
 
         try:
             runtime.initialize()
@@ -44,14 +41,11 @@ def hsr_rag_interface(user_query: str, runtime: RuntimeState) -> str:
                 request_status = "empty_query"
                 return "### Please enter a lore question."
 
-            if span is not None:
-                span.set_attribute("app.query.normalized_length", len(normalized_query))
+            span.set_attribute("app.query.normalized_length", len(normalized_query))
 
-            retrieval_span_ctx = _tracer.start_as_current_span("retrieve_lore_hybrid") if _tracer is not None else nullcontext()
-            with retrieval_span_ctx as retrieval_span:
+            with _tracer.start_as_current_span("retrieve_lore_hybrid") as retrieval_span:
                 matches = retrieve_lore_hybrid(normalized_query, runtime=runtime, top_k=2)
-                if retrieval_span is not None:
-                    retrieval_span.set_attribute("app.retrieval.matches", len(matches))
+                retrieval_span.set_attribute("app.retrieval.matches", len(matches))
 
             if not matches:
                 request_status = "no_match"
@@ -59,10 +53,9 @@ def hsr_rag_interface(user_query: str, runtime: RuntimeState) -> str:
 
             ai_response = generate_answer(normalized_query, matches, tracer=_tracer)
             answer_len = len(ai_response)
-            if span is not None:
-                span.set_attribute("app.answer.length", answer_len)
-                if _OTEL_CAPTURE_CONTENT:
-                    span.set_attribute("app.answer.preview", ai_response[:500])
+            span.set_attribute("app.answer.length", answer_len)
+            if _OTEL_CAPTURE_CONTENT:
+                span.set_attribute("app.answer.preview", ai_response[:500])
 
             request_status = "ok"
 
@@ -74,21 +67,17 @@ def hsr_rag_interface(user_query: str, runtime: RuntimeState) -> str:
             return final_output
         except Exception as e:
             request_status = "exception"
-            if span is not None:
-                span.record_exception(e)
-                span.set_attribute("app.error.type", type(e).__name__)
+            span.record_exception(e)
+            span.set_attribute("app.error.type", type(e).__name__)
             raise
         finally:
             elapsed_ms = (time.perf_counter() - request_started) * 1000.0
             metric_attrs = {"status": request_status}
 
-            if _requests_counter is not None:
-                _requests_counter.add(1, metric_attrs)
-            if _request_latency_ms_hist is not None:
-                _request_latency_ms_hist.record(elapsed_ms, metric_attrs)
-            if _answer_chars_hist is not None and answer_len > 0:
+            _requests_counter.add(1, metric_attrs)
+            _request_latency_ms_hist.record(elapsed_ms, metric_attrs)
+            if answer_len > 0:
                 _answer_chars_hist.record(answer_len, metric_attrs)
 
-            if span is not None:
-                span.set_attribute("app.request.status", request_status)
-                span.set_attribute("app.request.latency_ms", elapsed_ms)
+            span.set_attribute("app.request.status", request_status)
+            span.set_attribute("app.request.latency_ms", elapsed_ms)
