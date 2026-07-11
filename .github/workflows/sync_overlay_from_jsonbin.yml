@@ -1,0 +1,80 @@
+name: Sync Overlay From JsonBin
+
+on:
+  workflow_dispatch:
+    inputs:
+      jsonbin_id:
+        description: "JsonBin bin ID"
+        required: false
+        default: "6a52357cf5f4af5e2980b373"
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  sync-overlay:
+    runs-on: ubuntu-latest
+    env:
+      JSONBIN_ACCESS_KEY: ${{ secrets.JSONBIN_ACCESS_KEY }}
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Validate required secrets
+        run: |
+          test -n "$JSONBIN_ACCESS_KEY"
+
+      - name: Fetch overlay payload from JsonBin
+        env:
+          JSONBIN_ID: ${{ github.event.inputs.jsonbin_id }}
+        run: |
+          curl --fail --silent --show-error \
+            --request GET \
+            --url "https://api.jsonbin.io/v3/b/${JSONBIN_ID}" \
+            --header "x-access-key: ${JSONBIN_ACCESS_KEY}" \
+            --output /tmp/jsonbin_overlay_payload.json
+
+      - name: Validate and write overlay artifact
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          src_path = Path('/tmp/jsonbin_overlay_payload.json')
+          dst_path = Path('hsr-lore-from-fandom/artifacts/hsr_v1_overlay.json')
+
+          payload = json.loads(src_path.read_text(encoding='utf-8'))
+
+          if isinstance(payload, dict) and 'record' in payload:
+            records = payload['record']
+          else:
+            records = payload
+
+          if isinstance(records, dict):
+            records = [records]
+
+          if not isinstance(records, list):
+            raise RuntimeError("Expected a JSON list or object with 'record'")
+
+          dst_path.write_text(
+            json.dumps(records, ensure_ascii=False, indent=2) + '\n',
+              encoding='utf-8',
+          )
+
+          print(f'Wrote {len(records)} overlay records to {dst_path}')
+          PY
+
+      - name: Commit and push when overlay changed
+        run: |
+          if git diff --quiet -- hsr-lore-from-fandom/artifacts/hsr_v1_overlay.json; then
+            echo "No overlay changes detected."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add hsr-lore-from-fandom/artifacts/hsr_v1_overlay.json
+          git commit -m "chore: sync overlay from jsonbin"
+          git push
