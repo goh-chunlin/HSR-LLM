@@ -1,6 +1,8 @@
 import json
 
-with open("hsr_v1_chunks.json", "r", encoding="utf-8") as f:
+from rag_runtime import RuntimeState
+
+with open(RuntimeState().chunks_path, "r", encoding="utf-8") as f:
     chunks = json.load(f)
 
 print("--- Printing all database chunks mentioning '83' ---")

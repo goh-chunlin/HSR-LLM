@@ -12,9 +12,11 @@ from sentence_transformers import SentenceTransformer
 import faiss
 
 # Configuration
-INPUT_JSONL: Final[str] = "hsr_v1_raw_lore.jsonl"
-OUTPUT_FAISS: Final[str] = "my_hsr_1.0_index.faiss"
-OUTPUT_CHUNKS: Final[str] = "hsr_v1_chunks.json"
+BASE_DIR: Final[str] = os.path.dirname(os.path.abspath(__file__))
+ARTIFACTS_DIR: Final[str] = os.path.join(BASE_DIR, "artifacts")
+INPUT_JSONL: Final[str] = os.path.join(ARTIFACTS_DIR, "hsr_v1_raw_lore.jsonl")
+OUTPUT_FAISS: Final[str] = os.path.join(ARTIFACTS_DIR, "my_hsr_1.0_index.faiss")
+OUTPUT_CHUNKS: Final[str] = os.path.join(ARTIFACTS_DIR, "hsr_v1_chunks.json")
 
 CHUNK_SIZE: Final[int] = 500  # Character length per chunk
 CHUNK_OVERLAP: Final[int] = 100  # Overlap to prevent splitting context in half
@@ -74,6 +76,7 @@ def build_database() -> None:
 
     # Prevent tokenizers/joblib worker over-allocation noise in local runs.
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+    os.makedirs(ARTIFACTS_DIR, exist_ok=True)
 
     if not os.path.exists(INPUT_JSONL):
         print(f"Error: Cannot find {INPUT_JSONL}. Run your extractor first.")

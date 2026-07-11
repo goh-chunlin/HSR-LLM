@@ -4,9 +4,12 @@ import re
 import xml.etree.ElementTree as ET
 from typing import Final, Iterator, TypedDict
 
-XML_FILE: Final[str] = "honkai_star_rail_pages_current.xml"
-OUTPUT_JSONL: Final[str] = "hsr_v1_raw_lore.jsonl"
-INSPECT_OUTPUT_DIR: Final[str] = "inspect_outputs"
+BASE_DIR: Final[str] = os.path.dirname(os.path.abspath(__file__))
+SOURCE_DATA_DIR: Final[str] = os.path.join(BASE_DIR, "source_data")
+ARTIFACTS_DIR: Final[str] = os.path.join(BASE_DIR, "artifacts")
+XML_FILE: Final[str] = os.path.join(SOURCE_DATA_DIR, "honkai_star_rail_pages_current.xml")
+OUTPUT_JSONL: Final[str] = os.path.join(ARTIFACTS_DIR, "hsr_v1_raw_lore.jsonl")
+INSPECT_OUTPUT_DIR: Final[str] = os.path.join(BASE_DIR, "inspect_outputs")
 DEBUG_OUTPUT_JSONL: Final[str] = f"{INSPECT_OUTPUT_DIR}/hsr_v1_debug_pages.jsonl"
 LIMITED_OUTPUT_JSONL: Final[str] = f"{INSPECT_OUTPUT_DIR}/hsr_v1_raw_lore_sample.jsonl"
 

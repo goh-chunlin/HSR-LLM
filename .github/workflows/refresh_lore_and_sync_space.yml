@@ -51,8 +51,9 @@ jobs:
       - name: Detect artifact changes
         id: detect_changes
         run: |
-          git add hsr-lore-from-fandom/hsr_v1_chunks.json \
-                  hsr-lore-from-fandom/my_hsr_1.0_index.faiss
+          git add hsr-lore-from-fandom/artifacts/hsr_v1_raw_lore.jsonl \
+                  hsr-lore-from-fandom/artifacts/hsr_v1_chunks.json \
+                  hsr-lore-from-fandom/artifacts/my_hsr_1.0_index.faiss
 
           if git diff --cached --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"

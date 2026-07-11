@@ -24,13 +24,15 @@ Set `HSR_RUNTIME_INIT_MODE=lazy` to keep the current behavior.
 
 The XML wiki dump is large enough that it should not be your debugging unit. Use the extractor to create compact JSONL artifacts instead.
 
+Default generated artifacts now live under `artifacts/`, and the raw XML dump lives under `source_data/`.
+
 ```bash
 python3 extract_lore_hsr.py --limit 20
 ```
 
 That writes only the first 20 cleaned lore pages so you can iterate without regenerating the full dataset.
 
-If you omit `--output`, limited extraction runs default to `inspect_outputs/hsr_v1_raw_lore_sample.jsonl`, which is gitignored for tester-friendly scratch output.
+If you omit `--output`, full extraction runs default to `artifacts/hsr_v1_raw_lore.jsonl`, while limited runs default to `inspect_outputs/hsr_v1_raw_lore_sample.jsonl`, which is gitignored for tester-friendly scratch output.
 
 ```bash
 python3 inspect_lore_hsr.py --query Kafka --query-scope title --limit 3

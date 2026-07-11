@@ -131,8 +131,8 @@ Without this secret, the app will fail with API key/authentication errors.
 1. `hsr-lore-from-fandom/.gitattributes` exists and includes LFS rules for
 	`*.faiss` and `hsr_v1_chunks.json`.
 2. Runtime files exist in Space folder:
-	`hsr-lore-from-fandom/my_hsr_1.0_index.faiss` and
-	`hsr-lore-from-fandom/hsr_v1_chunks.json`.
+	`hsr-lore-from-fandom/artifacts/my_hsr_1.0_index.faiss` and
+	`hsr-lore-from-fandom/artifacts/hsr_v1_chunks.json`.
 3. `hsr-lore-from-fandom/README.md` contains Space YAML frontmatter.
 4. `hsr-lore-from-fandom/requirements.txt` includes runtime dependencies.
 

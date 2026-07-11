@@ -6,14 +6,18 @@ from typing import Any, cast
 from rag_types import LoreChunk
 
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ARTIFACTS_DIR = os.path.join(BASE_DIR, "artifacts")
+
+
 def _empty_lore_chunks() -> list[LoreChunk]:
     return []
 
 
 @dataclass
 class RuntimeState:
-    index_path: str = "my_hsr_1.0_index.faiss"
-    chunks_path: str = "hsr_v1_chunks.json"
+    index_path: str = os.path.join(ARTIFACTS_DIR, "my_hsr_1.0_index.faiss")
+    chunks_path: str = os.path.join(ARTIFACTS_DIR, "hsr_v1_chunks.json")
     runtime_init_mode: str = field(
         default_factory=lambda: os.getenv("HSR_RUNTIME_INIT_MODE", "lazy").strip().lower()
     )

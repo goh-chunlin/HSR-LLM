@@ -48,8 +48,8 @@ jobs:
 
       - name: Verify required runtime artifacts exist
         run: |
-          test -f hsr-lore-from-fandom/hsr_v1_chunks.json
-          test -f hsr-lore-from-fandom/my_hsr_1.0_index.faiss
+          test -f hsr-lore-from-fandom/artifacts/hsr_v1_chunks.json
+          test -f hsr-lore-from-fandom/artifacts/my_hsr_1.0_index.faiss
 
       - name: Deploy to Hugging Face Space
         run: |
