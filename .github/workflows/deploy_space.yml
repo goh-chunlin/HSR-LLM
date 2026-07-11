@@ -6,6 +6,10 @@ on:
     paths:
       - "hsr-lore-from-fandom/**"
       - ".github/workflows/deploy_space.yml"
+  workflow_run:
+    workflows: ["Sync Overlay From JsonBin"]
+    types: [completed]
+    branches: ["main"]
   workflow_dispatch:
     inputs:
       force_deploy:
@@ -16,6 +20,7 @@ on:
 
 jobs:
   deploy:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     env:
       HUGGINGFACE_USERNAME: ${{ secrets.HUGGINGFACE_USERNAME }}
