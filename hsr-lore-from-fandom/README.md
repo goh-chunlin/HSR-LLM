@@ -24,6 +24,21 @@ Set `HSR_RUNTIME_INIT_MODE=lazy` to keep the current behavior.
 
 If you have a small curated correction file, place it at `artifacts/hsr_v1_overlay.json` or point `HSR_LORE_OVERLAY_PATH` at an alternate JSON file.
 
+You can also host the overlay in a remote JSON API and fetch it at runtime.
+
+If both remote and local are configured:
+- Remote overlay is attempted first.
+- On remote failure, runtime falls back to local overlay.
+- If both fail, runtime continues with base corpus only.
+
+For my case, I have setup myself the JSON on jsonbin.io (You can drop me a message for the Access Key)
+
+```
+curl --request GET \
+  --url https://api.jsonbin.io/v3/b/6a52357cf5f4af5e2980b373 \
+  --header 'x-access-key: <access key>'
+```
+
 The overlay file should be a JSON list of objects with at least `title` and `text`. When a title matches an existing base chunk, the overlay record replaces it in memory; otherwise it is appended as an additional record.
 
 Overlay records receive an extra ranking boost controlled by `HSR_LORE_OVERLAY_SCORE_BONUS`.
@@ -32,6 +47,19 @@ Overlay records receive an extra ranking boost controlled by `HSR_LORE_OVERLAY_S
 export HSR_LORE_OVERLAY_PATH=artifacts/hsr_v1_overlay.json
 export HSR_LORE_OVERLAY_SCORE_BONUS=0.4
 ```
+
+Remote overlay example (JSONBin-compatible):
+
+```bash
+export HSR_LORE_OVERLAY_URL="https://api.jsonbin.io/v3/b/<BIN_ID>"
+export HSR_LORE_OVERLAY_ACCESS_KEY="<YOUR_ACCESS_KEY>"
+export HSR_LORE_OVERLAY_ACCESS_HEADER="x-access-key"
+export HSR_LORE_OVERLAY_TIMEOUT_SEC=8
+```
+
+Expected payload formats:
+- Plain list: `[ {"title": "...", "text": "..."}, ... ]`
+- JSONBin v3 wrapper: `{ "record": [ {"title": "...", "text": "..."}, ... ] }`
 
 The default bias is intentionally stronger than a neutral tie-break so corrected lore can outrank incomplete base data more reliably.
 
