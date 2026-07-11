@@ -13,6 +13,11 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ARTIFACTS_DIR = os.path.join(BASE_DIR, "artifacts")
 DEFAULT_OVERLAY_PATH = os.path.join(ARTIFACTS_DIR, "hsr_v1_overlay.json")
 DEFAULT_OVERLAY_TIMEOUT_SEC = 8.0
+DEFAULT_OVERLAY_USER_AGENT = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36"
+)
 
 
 def _resolve_overlay_path() -> str:
@@ -47,6 +52,11 @@ def _resolve_overlay_timeout_sec() -> float:
             flush=True,
         )
         return DEFAULT_OVERLAY_TIMEOUT_SEC
+
+
+def _resolve_overlay_user_agent() -> str:
+    user_agent = os.getenv("HSR_LORE_OVERLAY_USER_AGENT", DEFAULT_OVERLAY_USER_AGENT).strip()
+    return user_agent or DEFAULT_OVERLAY_USER_AGENT
 
 
 def _empty_lore_chunks() -> list[LoreChunk]:
@@ -98,8 +108,17 @@ def _load_overlay_payload_from_file(path: str) -> object:
         return json.load(f)
 
 
-def _load_overlay_payload_from_url(url: str, access_key: str, access_header_name: str, timeout_sec: float) -> object:
-    headers = {"Accept": "application/json"}
+def _load_overlay_payload_from_url(
+    url: str,
+    access_key: str,
+    access_header_name: str,
+    timeout_sec: float,
+    user_agent: str,
+) -> object:
+    headers = {
+        "Accept": "application/json",
+        "User-Agent": user_agent,
+    }
     if access_key:
         headers[access_header_name] = access_key
 
@@ -170,6 +189,7 @@ class RuntimeState:
     overlay_access_key: str = field(default_factory=_resolve_overlay_access_key)
     overlay_access_header_name: str = field(default_factory=_resolve_overlay_access_header_name)
     overlay_timeout_sec: float = field(default_factory=_resolve_overlay_timeout_sec)
+    overlay_user_agent: str = field(default_factory=_resolve_overlay_user_agent)
     runtime_init_mode: str = field(
         default_factory=lambda: os.getenv("HSR_RUNTIME_INIT_MODE", "lazy").strip().lower()
     )
@@ -243,7 +263,8 @@ class RuntimeState:
                             "[STARTUP DEBUG] Remote overlay request config: "
                             f"header={self.overlay_access_header_name!r}, "
                             f"key_present={bool(self.overlay_access_key)}, "
-                            f"timeout_sec={self.overlay_timeout_sec}"
+                            f"timeout_sec={self.overlay_timeout_sec}, "
+                            f"user_agent={self.overlay_user_agent!r}"
                         ),
                         flush=True,
                     )
@@ -252,6 +273,7 @@ class RuntimeState:
                         access_key=self.overlay_access_key,
                         access_header_name=self.overlay_access_header_name,
                         timeout_sec=self.overlay_timeout_sec,
+                        user_agent=self.overlay_user_agent,
                     )
                     overlay_loaded_chunks = _extract_overlay_records(overlay_payload)
                     self.overlay_source = "remote"
@@ -268,7 +290,7 @@ class RuntimeState:
                 except URLError as e:
                     print(f"[STARTUP WARNING] Remote overlay fetch failed: {e}", flush=True)
                     print("[STARTUP WARNING] Falling back to local overlay file when available.", flush=True)
-                except (URLError, HTTPError, json.JSONDecodeError, RuntimeError, ValueError) as e:
+                except (json.JSONDecodeError, RuntimeError, ValueError) as e:
                     print(f"[STARTUP WARNING] Remote overlay fetch failed: {e}", flush=True)
                     print("[STARTUP WARNING] Falling back to local overlay file when available.", flush=True)
 

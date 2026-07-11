@@ -55,7 +55,10 @@ export HSR_LORE_OVERLAY_URL="https://api.jsonbin.io/v3/b/<BIN_ID>"
 export HSR_LORE_OVERLAY_ACCESS_KEY="<YOUR_ACCESS_KEY>"
 export HSR_LORE_OVERLAY_ACCESS_HEADER="x-access-key"
 export HSR_LORE_OVERLAY_TIMEOUT_SEC=8
+export HSR_LORE_OVERLAY_USER_AGENT="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 ```
+
+`HSR_LORE_OVERLAY_USER_AGENT` already has a browser-like default in code. Set it explicitly in Space Secrets only if your provider requires a different user-agent.
 
 Expected payload formats:
 - Plain list: `[ {"title": "...", "text": "..."}, ... ]`
