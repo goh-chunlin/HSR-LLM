@@ -110,6 +110,16 @@ def _load_overlay_payload_from_url(url: str, access_key: str, access_header_name
     return json.loads(body)
 
 
+def _read_http_error_body(err: HTTPError) -> str:
+    try:
+        raw = err.read()
+        if not raw:
+            return ""
+        return raw.decode("utf-8", errors="replace").strip()
+    except Exception:
+        return ""
+
+
 def _merge_overlay_chunks(base_chunks: list[LoreChunk], overlay_chunks: list[LoreChunk]) -> list[LoreChunk]:
     merged_chunks = [
         cast(
@@ -228,6 +238,15 @@ class RuntimeState:
             if self.overlay_url:
                 try:
                     print(f"Fetching overlay JSON metadata from {self.overlay_url}...", flush=True)
+                    print(
+                        (
+                            "[STARTUP DEBUG] Remote overlay request config: "
+                            f"header={self.overlay_access_header_name!r}, "
+                            f"key_present={bool(self.overlay_access_key)}, "
+                            f"timeout_sec={self.overlay_timeout_sec}"
+                        ),
+                        flush=True,
+                    )
                     overlay_payload = _load_overlay_payload_from_url(
                         url=self.overlay_url,
                         access_key=self.overlay_access_key,
@@ -236,6 +255,19 @@ class RuntimeState:
                     )
                     overlay_loaded_chunks = _extract_overlay_records(overlay_payload)
                     self.overlay_source = "remote"
+                except HTTPError as e:
+                    body = _read_http_error_body(e)
+                    if body:
+                        print(
+                            f"[STARTUP WARNING] Remote overlay fetch failed: HTTP {e.code} {e.reason}. Response: {body}",
+                            flush=True,
+                        )
+                    else:
+                        print(f"[STARTUP WARNING] Remote overlay fetch failed: HTTP {e.code} {e.reason}", flush=True)
+                    print("[STARTUP WARNING] Falling back to local overlay file when available.", flush=True)
+                except URLError as e:
+                    print(f"[STARTUP WARNING] Remote overlay fetch failed: {e}", flush=True)
+                    print("[STARTUP WARNING] Falling back to local overlay file when available.", flush=True)
                 except (URLError, HTTPError, json.JSONDecodeError, RuntimeError, ValueError) as e:
                     print(f"[STARTUP WARNING] Remote overlay fetch failed: {e}", flush=True)
                     print("[STARTUP WARNING] Falling back to local overlay file when available.", flush=True)
