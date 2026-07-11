@@ -1,4 +1,5 @@
 import re
+import os
 from typing import Any, cast
 
 from rag_intent import retrieval_score_adjustment
@@ -76,8 +77,27 @@ _QUERY_STOPWORDS = frozenset(
 )
 
 MAX_USER_QUERY_CHARS = 1200
+DEFAULT_OVERLAY_SCORE_BONUS = 0.4
 
 _stemmer: Any | None = None
+
+
+def _read_overlay_score_bonus() -> float:
+    raw_value = os.getenv("HSR_LORE_OVERLAY_SCORE_BONUS", str(DEFAULT_OVERLAY_SCORE_BONUS)).strip()
+    if not raw_value:
+        return DEFAULT_OVERLAY_SCORE_BONUS
+
+    try:
+        return float(raw_value)
+    except ValueError:
+        print(
+            f"[STARTUP WARNING] Invalid HSR_LORE_OVERLAY_SCORE_BONUS={raw_value!r}; defaulting to {DEFAULT_OVERLAY_SCORE_BONUS}.",
+            flush=True,
+        )
+        return DEFAULT_OVERLAY_SCORE_BONUS
+
+
+OVERLAY_SCORE_BONUS = _read_overlay_score_bonus()
 
 
 def tokenize_text(text: str) -> list[str]:
@@ -219,10 +239,14 @@ def retrieve_lore_hybrid(
     for idx, total_score in combined_scores.items():
         raw_text = str(runtime.text_metadata[idx].get("text", "")).lower()
         title = str(runtime.text_metadata[idx].get("title", "")).lower()
+        source = str(runtime.text_metadata[idx].get("source", "base")).lower()
         title_bonus = _title_match_bonus(query, title)
 
         if title_bonus > 0:
             total_score += title_bonus
+
+        if source == "overlay":
+            total_score += OVERLAY_SCORE_BONUS
 
         if query_context_pairs:
             combined_text = raw_text + " " + title

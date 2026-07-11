@@ -20,6 +20,21 @@ Set `HSR_RUNTIME_INIT_MODE=eager` to initialize the runtime at app launch instea
 
 Set `HSR_RUNTIME_INIT_MODE=lazy` to keep the current behavior.
 
+## Runtime Overlay Corrections
+
+If you have a small curated correction file, place it at `artifacts/hsr_v1_overlay.json` or point `HSR_LORE_OVERLAY_PATH` at an alternate JSON file.
+
+The overlay file should be a JSON list of objects with at least `title` and `text`. When a title matches an existing base chunk, the overlay record replaces it in memory; otherwise it is appended as an additional record.
+
+Overlay records receive an extra ranking boost controlled by `HSR_LORE_OVERLAY_SCORE_BONUS`.
+
+```bash
+export HSR_LORE_OVERLAY_PATH=artifacts/hsr_v1_overlay.json
+export HSR_LORE_OVERLAY_SCORE_BONUS=0.4
+```
+
+The default bias is intentionally stronger than a neutral tie-break so corrected lore can outrank incomplete base data more reliably.
+
 ## Smaller Debug Workflows
 
 The XML wiki dump is large enough that it should not be your debugging unit. Use the extractor to create compact JSONL artifacts instead.

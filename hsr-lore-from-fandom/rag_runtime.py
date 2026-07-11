@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Any, cast
 
@@ -8,16 +9,88 @@ from rag_types import LoreChunk
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ARTIFACTS_DIR = os.path.join(BASE_DIR, "artifacts")
+DEFAULT_OVERLAY_PATH = os.path.join(ARTIFACTS_DIR, "hsr_v1_overlay.json")
+
+
+def _resolve_overlay_path() -> str:
+    overlay_path = os.getenv("HSR_LORE_OVERLAY_PATH", DEFAULT_OVERLAY_PATH).strip()
+    return overlay_path or DEFAULT_OVERLAY_PATH
 
 
 def _empty_lore_chunks() -> list[LoreChunk]:
     return []
 
 
+def _normalize_chunk_title(title: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[^\w\s]+", " ", title.lower())).strip()
+
+
+def _normalize_lore_chunk(item: object, source: str) -> LoreChunk:
+    if isinstance(item, dict):
+        item_dict = cast(dict[str, object], item)
+        title = str(item_dict.get("title", ""))
+        text = str(item_dict.get("text", ""))
+    else:
+        title = ""
+        text = ""
+
+    return cast(
+        LoreChunk,
+        {
+            "title": title,
+            "text": text,
+            "source": source,
+            "chunk_key": _normalize_chunk_title(title),
+        },
+    )
+
+
+def _merge_overlay_chunks(base_chunks: list[LoreChunk], overlay_chunks: list[LoreChunk]) -> list[LoreChunk]:
+    merged_chunks = [
+        cast(
+            LoreChunk,
+            {
+                "title": str(chunk.get("title", "")),
+                "text": str(chunk.get("text", "")),
+                "source": str(chunk.get("source", "base")),
+                "chunk_key": str(chunk.get("chunk_key", _normalize_chunk_title(str(chunk.get("title", ""))))),
+            },
+        )
+        for chunk in base_chunks
+    ]
+
+    key_to_index = {
+        str(chunk.get("chunk_key", _normalize_chunk_title(str(chunk.get("title", ""))))): index
+        for index, chunk in enumerate(merged_chunks)
+    }
+
+    for chunk in overlay_chunks:
+        key = str(chunk.get("chunk_key", _normalize_chunk_title(str(chunk.get("title", "")))))
+        normalized_chunk = cast(
+            LoreChunk,
+            {
+                "title": str(chunk.get("title", "")),
+                "text": str(chunk.get("text", "")),
+                "source": "overlay",
+                "chunk_key": key,
+            },
+        )
+
+        existing_index = key_to_index.get(key)
+        if existing_index is None:
+            key_to_index[key] = len(merged_chunks)
+            merged_chunks.append(normalized_chunk)
+        else:
+            merged_chunks[existing_index] = normalized_chunk
+
+    return merged_chunks
+
+
 @dataclass
 class RuntimeState:
     index_path: str = os.path.join(ARTIFACTS_DIR, "my_hsr_1.0_index.faiss")
     chunks_path: str = os.path.join(ARTIFACTS_DIR, "hsr_v1_chunks.json")
+    overlay_path: str = field(default_factory=_resolve_overlay_path)
     runtime_init_mode: str = field(
         default_factory=lambda: os.getenv("HSR_RUNTIME_INIT_MODE", "lazy").strip().lower()
     )
@@ -28,6 +101,8 @@ class RuntimeState:
     text_metadata: list[LoreChunk] = field(default_factory=_empty_lore_chunks)
     bm25: Any | None = None
     runtime_ready: bool = False
+    overlay_record_count: int = 0
+    overlay_replacement_count: int = 0
 
     def should_eager_initialize(self) -> bool:
         if self.runtime_init_mode in {"eager", "lazy"}:
@@ -75,17 +150,33 @@ class RuntimeState:
 
             normalized_chunks: list[LoreChunk] = []
             for item in loaded_chunks:
-                if isinstance(item, dict):
-                    item_dict = cast(dict[str, object], item)
-                    normalized_chunks.append(
-                        {
-                            "title": str(item_dict.get("title", "")),
-                            "text": str(item_dict.get("text", "")),
-                        }
-                    )
+                normalized_chunks.append(_normalize_lore_chunk(item, "base"))
 
-            self.text_metadata = normalized_chunks
+            overlay_chunks: list[LoreChunk] = []
+            if os.path.isfile(self.overlay_path):
+                print(f"Reading overlay JSON metadata chunks from {self.overlay_path}...", flush=True)
+                with open(self.overlay_path, "r", encoding="utf-8") as f:
+                    overlay_payload: object = json.load(f)
+
+                if not isinstance(overlay_payload, list):
+                    raise RuntimeError(f"Invalid overlay metadata format in {self.overlay_path}: expected list")
+
+                overlay_loaded_chunks = cast(list[object], overlay_payload)
+                for item in overlay_loaded_chunks:
+                    overlay_chunks.append(_normalize_lore_chunk(item, "overlay"))
+            else:
+                print(f"Overlay JSON not found at {self.overlay_path}; using base corpus only.", flush=True)
+
+            merged_chunks = _merge_overlay_chunks(normalized_chunks, overlay_chunks)
+            self.overlay_record_count = len(overlay_chunks)
+            self.overlay_replacement_count = max(0, len(normalized_chunks) + len(overlay_chunks) - len(merged_chunks))
+            self.text_metadata = merged_chunks
             print(f"-> Metadata contains {len(self.text_metadata)} records.", flush=True)
+            if self.overlay_record_count > 0:
+                print(
+                    f"-> Overlay contributes {self.overlay_record_count} records and replaced {self.overlay_replacement_count} base records.",
+                    flush=True,
+                )
 
             if self.index.ntotal != len(self.text_metadata):
                 print(

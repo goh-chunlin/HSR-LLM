@@ -2,7 +2,16 @@ import json
 
 from rag_runtime import RuntimeState
 
-with open(RuntimeState().chunks_path, "r", encoding="utf-8") as f:
+runtime = RuntimeState()
+runtime.initialize()
+
+print("--- Runtime summary ---")
+print(f"Overlay path: {runtime.overlay_path}")
+print(f"Overlay records: {runtime.overlay_record_count}")
+print(f"Overlay replacements: {runtime.overlay_replacement_count}")
+print(f"Metadata records: {len(runtime.text_metadata)}")
+
+with open(runtime.chunks_path, "r", encoding="utf-8") as f:
     chunks = json.load(f)
 
 print("--- Printing all database chunks mentioning '83' ---")
