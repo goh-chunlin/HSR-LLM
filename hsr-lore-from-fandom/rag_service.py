@@ -9,6 +9,7 @@ from observability import (
     tracer as _tracer,
 )
 from rag_generation import generate_answer
+from rag_intent import classify_query_intent, retrieval_top_k_for_intent
 from rag_retrieval import normalize_user_query, retrieve_lore_hybrid, MAX_USER_QUERY_CHARS
 from rag_runtime import RuntimeState
 
@@ -42,15 +43,29 @@ def hsr_rag_interface(user_query: str, runtime: RuntimeState) -> str:
 
             span.set_attribute("app.query.normalized_length", len(normalized_query))
 
+            intent = classify_query_intent(normalized_query)
+            intent_label = intent["label"]
+            intent_confidence = float(intent["confidence"])
+            span.set_attribute("app.intent.label", intent_label)
+            span.set_attribute("app.intent.confidence", intent_confidence)
+
+            top_k = retrieval_top_k_for_intent(intent_label, default_top_k=4)
+
             with _tracer.start_as_current_span("retrieve_lore_hybrid") as retrieval_span:
-                matches = retrieve_lore_hybrid(normalized_query, runtime=runtime, top_k=4)
+                matches = retrieve_lore_hybrid(
+                    normalized_query,
+                    runtime=runtime,
+                    top_k=top_k,
+                    intent_label=intent_label,
+                )
                 retrieval_span.set_attribute("app.retrieval.matches", len(matches))
+                retrieval_span.set_attribute("app.intent.label", intent_label)
 
             if not matches:
                 request_status = "no_match"
                 return "### I couldn't find any documents matching that query."
 
-            ai_response = generate_answer(normalized_query, matches, tracer=_tracer)
+            ai_response = generate_answer(normalized_query, matches, tracer=_tracer, intent_label=intent_label)
             answer_len = len(ai_response)
             span.set_attribute("app.answer.length", answer_len)
             if _OTEL_CAPTURE_CONTENT:

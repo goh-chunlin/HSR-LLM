@@ -1,8 +1,9 @@
 import re
 from typing import Any, cast
 
+from rag_intent import retrieval_score_adjustment
 from rag_runtime import RuntimeState
-from rag_types import RetrievedChunk
+from rag_types import IntentType, RetrievedChunk
 
 
 _QUERY_STOPWORDS = frozenset(
@@ -178,6 +179,7 @@ def retrieve_lore_hybrid(
     query: str,
     runtime: RuntimeState,
     top_k: int = 3,
+    intent_label: IntentType = "other",
 ) -> list[RetrievedChunk]:
     if (
         not runtime.runtime_ready
@@ -241,6 +243,13 @@ def retrieve_lore_hybrid(
             if not any(digit in raw_text or digit in title for digit in query_digits):
                 final_filtered_scores[idx] = 0.0
                 continue
+
+        total_score += retrieval_score_adjustment(
+            intent=intent_label,
+            query=query,
+            title=title,
+            text=raw_text,
+        )
 
         final_filtered_scores[idx] = total_score
 
