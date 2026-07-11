@@ -3,8 +3,6 @@ import os
 import re
 from dataclasses import dataclass, field
 from typing import Any, cast
-from urllib.error import URLError, HTTPError
-from urllib.request import Request, urlopen
 
 from rag_types import LoreChunk
 
@@ -12,51 +10,11 @@ from rag_types import LoreChunk
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ARTIFACTS_DIR = os.path.join(BASE_DIR, "artifacts")
 DEFAULT_OVERLAY_PATH = os.path.join(ARTIFACTS_DIR, "hsr_v1_overlay.json")
-DEFAULT_OVERLAY_TIMEOUT_SEC = 8.0
-DEFAULT_OVERLAY_USER_AGENT = (
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/124.0.0.0 Safari/537.36"
-)
 
 
 def _resolve_overlay_path() -> str:
     overlay_path = os.getenv("HSR_LORE_OVERLAY_PATH", DEFAULT_OVERLAY_PATH).strip()
     return overlay_path or DEFAULT_OVERLAY_PATH
-
-
-def _resolve_overlay_url() -> str:
-    return os.getenv("HSR_LORE_OVERLAY_URL", "").strip()
-
-
-def _resolve_overlay_access_key() -> str:
-    return os.getenv("HSR_LORE_OVERLAY_ACCESS_KEY", "").strip()
-
-
-def _resolve_overlay_access_header_name() -> str:
-    header_name = os.getenv("HSR_LORE_OVERLAY_ACCESS_HEADER", "x-access-key").strip()
-    return header_name or "x-access-key"
-
-
-def _resolve_overlay_timeout_sec() -> float:
-    raw_value = os.getenv("HSR_LORE_OVERLAY_TIMEOUT_SEC", str(DEFAULT_OVERLAY_TIMEOUT_SEC)).strip()
-    if not raw_value:
-        return DEFAULT_OVERLAY_TIMEOUT_SEC
-
-    try:
-        timeout = float(raw_value)
-        return timeout if timeout > 0 else DEFAULT_OVERLAY_TIMEOUT_SEC
-    except ValueError:
-        print(
-            f"[STARTUP WARNING] Invalid HSR_LORE_OVERLAY_TIMEOUT_SEC={raw_value!r}; defaulting to {DEFAULT_OVERLAY_TIMEOUT_SEC}.",
-            flush=True,
-        )
-        return DEFAULT_OVERLAY_TIMEOUT_SEC
-
-
-def _resolve_overlay_user_agent() -> str:
-    user_agent = os.getenv("HSR_LORE_OVERLAY_USER_AGENT", DEFAULT_OVERLAY_USER_AGENT).strip()
-    return user_agent or DEFAULT_OVERLAY_USER_AGENT
 
 
 def _empty_lore_chunks() -> list[LoreChunk]:
@@ -100,43 +58,12 @@ def _extract_overlay_records(payload: object) -> list[object]:
         if isinstance(record, dict):
             return [cast(object, record)]
 
-    raise RuntimeError("Invalid overlay metadata format: expected list or JSONBin record payload")
+    raise RuntimeError("Invalid overlay metadata format: expected list or object with 'record'")
 
 
 def _load_overlay_payload_from_file(path: str) -> object:
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
-
-
-def _load_overlay_payload_from_url(
-    url: str,
-    access_key: str,
-    access_header_name: str,
-    timeout_sec: float,
-    user_agent: str,
-) -> object:
-    headers = {
-        "Accept": "application/json",
-        "User-Agent": user_agent,
-    }
-    if access_key:
-        headers[access_header_name] = access_key
-
-    req = Request(url=url, headers=headers, method="GET")
-    with urlopen(req, timeout=timeout_sec) as response:  # nosec B310 - URL is controlled by deployment env
-        charset = response.headers.get_content_charset() or "utf-8"
-        body = response.read().decode(charset, errors="replace")
-    return json.loads(body)
-
-
-def _read_http_error_body(err: HTTPError) -> str:
-    try:
-        raw = err.read()
-        if not raw:
-            return ""
-        return raw.decode("utf-8", errors="replace").strip()
-    except Exception:
-        return ""
 
 
 def _merge_overlay_chunks(base_chunks: list[LoreChunk], overlay_chunks: list[LoreChunk]) -> list[LoreChunk]:
@@ -185,11 +112,6 @@ class RuntimeState:
     index_path: str = os.path.join(ARTIFACTS_DIR, "my_hsr_1.0_index.faiss")
     chunks_path: str = os.path.join(ARTIFACTS_DIR, "hsr_v1_chunks.json")
     overlay_path: str = field(default_factory=_resolve_overlay_path)
-    overlay_url: str = field(default_factory=_resolve_overlay_url)
-    overlay_access_key: str = field(default_factory=_resolve_overlay_access_key)
-    overlay_access_header_name: str = field(default_factory=_resolve_overlay_access_header_name)
-    overlay_timeout_sec: float = field(default_factory=_resolve_overlay_timeout_sec)
-    overlay_user_agent: str = field(default_factory=_resolve_overlay_user_agent)
     runtime_init_mode: str = field(
         default_factory=lambda: os.getenv("HSR_RUNTIME_INIT_MODE", "lazy").strip().lower()
     )
@@ -255,59 +177,19 @@ class RuntimeState:
             overlay_chunks: list[LoreChunk] = []
             overlay_loaded_chunks: list[object] = []
 
-            if self.overlay_url:
+            if os.path.isfile(self.overlay_path):
                 try:
-                    print(f"Fetching overlay JSON metadata from {self.overlay_url}...", flush=True)
-                    print(
-                        (
-                            "[STARTUP DEBUG] Remote overlay request config: "
-                            f"header={self.overlay_access_header_name!r}, "
-                            f"key_present={bool(self.overlay_access_key)}, "
-                            f"timeout_sec={self.overlay_timeout_sec}, "
-                            f"user_agent={self.overlay_user_agent!r}"
-                        ),
-                        flush=True,
-                    )
-                    overlay_payload = _load_overlay_payload_from_url(
-                        url=self.overlay_url,
-                        access_key=self.overlay_access_key,
-                        access_header_name=self.overlay_access_header_name,
-                        timeout_sec=self.overlay_timeout_sec,
-                        user_agent=self.overlay_user_agent,
-                    )
+                    print(f"Reading overlay JSON metadata chunks from {self.overlay_path}...", flush=True)
+                    overlay_payload = _load_overlay_payload_from_file(self.overlay_path)
                     overlay_loaded_chunks = _extract_overlay_records(overlay_payload)
-                    self.overlay_source = "remote"
-                except HTTPError as e:
-                    body = _read_http_error_body(e)
-                    if body:
-                        print(
-                            f"[STARTUP WARNING] Remote overlay fetch failed: HTTP {e.code} {e.reason}. Response: {body}",
-                            flush=True,
-                        )
-                    else:
-                        print(f"[STARTUP WARNING] Remote overlay fetch failed: HTTP {e.code} {e.reason}", flush=True)
-                    print("[STARTUP WARNING] Falling back to local overlay file when available.", flush=True)
-                except URLError as e:
-                    print(f"[STARTUP WARNING] Remote overlay fetch failed: {e}", flush=True)
-                    print("[STARTUP WARNING] Falling back to local overlay file when available.", flush=True)
-                except (json.JSONDecodeError, RuntimeError, ValueError) as e:
-                    print(f"[STARTUP WARNING] Remote overlay fetch failed: {e}", flush=True)
-                    print("[STARTUP WARNING] Falling back to local overlay file when available.", flush=True)
-
-            if not overlay_loaded_chunks:
-                if os.path.isfile(self.overlay_path):
-                    try:
-                        print(f"Reading overlay JSON metadata chunks from {self.overlay_path}...", flush=True)
-                        overlay_payload = _load_overlay_payload_from_file(self.overlay_path)
-                        overlay_loaded_chunks = _extract_overlay_records(overlay_payload)
-                        self.overlay_source = "local"
-                    except (OSError, json.JSONDecodeError, RuntimeError, ValueError) as e:
-                        print(f"[STARTUP WARNING] Local overlay load failed: {e}", flush=True)
-                        print("[STARTUP WARNING] Continuing with base corpus only.", flush=True)
-                        self.overlay_source = "none"
-                else:
-                    print(f"Overlay JSON not found at {self.overlay_path}; using base corpus only.", flush=True)
+                    self.overlay_source = "local"
+                except (OSError, json.JSONDecodeError, RuntimeError, ValueError) as e:
+                    print(f"[STARTUP WARNING] Local overlay load failed: {e}", flush=True)
+                    print("[STARTUP WARNING] Continuing with base corpus only.", flush=True)
                     self.overlay_source = "none"
+            else:
+                print(f"Overlay JSON not found at {self.overlay_path}; using base corpus only.", flush=True)
+                self.overlay_source = "none"
 
             for item in overlay_loaded_chunks:
                 overlay_chunks.append(_normalize_lore_chunk(item, "overlay"))
