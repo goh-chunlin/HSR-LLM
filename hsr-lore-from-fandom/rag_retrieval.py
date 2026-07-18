@@ -285,12 +285,20 @@ def retrieve_lore_hybrid(
 
     results: list[RetrievedChunk] = []
     for idx, final_score in sorted_docs:
-        results.append(
-            {
-                "title": runtime.text_metadata[idx]["title"],
-                "text": runtime.text_metadata[idx]["text"],
-                "score": final_score,
-            }
-        )
+        chunk = runtime.text_metadata[idx]
+        result: RetrievedChunk = {
+            "title": chunk["title"],
+            "text": chunk["text"],
+            "score": final_score,
+        }
+
+        reference = chunk.get("reference")
+        media = chunk.get("media")
+        if isinstance(reference, dict):
+            result["reference"] = reference
+        if isinstance(media, list) and media:
+            result["media"] = media
+
+        results.append(result)
 
     return results

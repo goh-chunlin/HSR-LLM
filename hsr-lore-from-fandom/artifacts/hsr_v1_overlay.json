@@ -21,7 +21,25 @@
   },
   {
     "title": "Himeko's hometown",
-    "text": "Himeko's hometown is the Dovebrook District located on the planet Planarcadia. This is where she spent her youth and first discovered the stranded Astral Express that she later repaired."
+    "text": "Himeko's hometown is the Dovebrook District located on the planet Planarcadia. This is where she spent her youth and first discovered the stranded Astral Express that she later repaired.",
+    "media": [
+      {
+        "url": "https://upload-os-bbs.hoyolab.com/upload/2026/02/10/304707241/515c65d1f1841abb86b9009dc4ffea4c_4527578261442475641.jpg?x-oss-process=image%2Fresize%2Cs_1000%2Fauto-orient%2C0%2Finterlace%2C1%2Fformat%2Cwebp%2Fquality%2Cq_70",
+        "type": "image",
+        "title": "Graphia Academy",
+        "description": "Himeko attended Graphia Academy for her high school and early education.",
+        "attributionUrl": "https://www.hoyolab.com/article/43718899",
+        "copyrightOrLicense": "Copyright HoYoverse, used under fair use"
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=JwD3wN33R_A",
+        "type": "video",
+        "title": "Honkai: Star Rail Version 4.0 Special Programme",
+        "description": "Shaoji reveals Himeko's hometown in the Honkai: Star Rail Version 4.0 Special Programme.",
+        "attributionUrl": "https://www.youtube.com/watch?v=JwD3wN33R_A",
+        "copyrightOrLicense": "Copyright HoYoverse, used under fair use"
+      }
+    ]
   },
   {
     "title": "Evanescia",

@@ -25,24 +25,96 @@ def _normalize_chunk_title(title: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^\w\s]+", " ", title.lower())).strip()
 
 
+def _read_str(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip()
+    return normalized or None
+
+
+def _normalize_reference_metadata(item: object) -> dict[str, str] | None:
+    if not isinstance(item, dict):
+        return None
+
+    item_dict = cast(dict[str, object], item)
+
+    source_name = _read_str(item_dict.get("sourceName"))
+    source_url = _read_str(item_dict.get("sourceUrl"))
+    if source_name is None or source_url is None:
+        return None
+
+    normalized: dict[str, str] = {
+        "sourceName": source_name,
+        "sourceUrl": source_url,
+    }
+
+    for key in ("pageId", "revisionId", "retrievedAt", "license"):
+        value = _read_str(item_dict.get(key))
+        if value is not None:
+            normalized[key] = value
+
+    return normalized
+
+
+def _normalize_media_metadata(item: object) -> list[dict[str, str]]:
+    if not isinstance(item, list):
+        return []
+
+    raw_items = cast(list[object], item)
+    normalized_media: list[dict[str, str]] = []
+    for raw_entry in raw_items:
+        if not isinstance(raw_entry, dict):
+            continue
+
+        raw_entry_dict = cast(dict[str, object], raw_entry)
+
+        url = _read_str(raw_entry_dict.get("url"))
+        media_type = _read_str(raw_entry_dict.get("type"))
+        media_type = media_type.lower() if media_type is not None else None
+        if url is None or media_type not in {"image", "video"}:
+            continue
+
+        normalized_entry: dict[str, str] = {
+            "url": url,
+            "type": media_type,
+        }
+
+        for key in ("title", "description", "attributionUrl", "copyrightOrLicense"):
+            value = _read_str(raw_entry_dict.get(key))
+            if value is not None:
+                normalized_entry[key] = value
+
+        normalized_media.append(normalized_entry)
+
+    return normalized_media
+
+
 def _normalize_lore_chunk(item: object, source: str) -> LoreChunk:
     if isinstance(item, dict):
         item_dict = cast(dict[str, object], item)
         title = str(item_dict.get("title", ""))
         text = str(item_dict.get("text", ""))
+        reference = _normalize_reference_metadata(item_dict.get("reference"))
+        media = _normalize_media_metadata(item_dict.get("media"))
     else:
         title = ""
         text = ""
+        reference = None
+        media = []
 
-    return cast(
-        LoreChunk,
-        {
-            "title": title,
-            "text": text,
-            "source": source,
-            "chunk_key": _normalize_chunk_title(title),
-        },
-    )
+    normalized_chunk: dict[str, object] = {
+        "title": title,
+        "text": text,
+        "source": source,
+        "chunk_key": _normalize_chunk_title(title),
+    }
+
+    if reference is not None:
+        normalized_chunk["reference"] = reference
+    if media:
+        normalized_chunk["media"] = media
+
+    return cast(LoreChunk, normalized_chunk)
 
 
 def _extract_overlay_records(payload: object) -> list[object]:
@@ -67,18 +139,23 @@ def _load_overlay_payload_from_file(path: str) -> object:
 
 
 def _merge_overlay_chunks(base_chunks: list[LoreChunk], overlay_chunks: list[LoreChunk]) -> list[LoreChunk]:
-    merged_chunks = [
-        cast(
-            LoreChunk,
-            {
-                "title": str(chunk.get("title", "")),
-                "text": str(chunk.get("text", "")),
-                "source": str(chunk.get("source", "base")),
-                "chunk_key": str(chunk.get("chunk_key", _normalize_chunk_title(str(chunk.get("title", ""))))),
-            },
-        )
-        for chunk in base_chunks
-    ]
+    merged_chunks: list[LoreChunk] = []
+    for chunk in base_chunks:
+        normalized_chunk: dict[str, object] = {
+            "title": str(chunk.get("title", "")),
+            "text": str(chunk.get("text", "")),
+            "source": str(chunk.get("source", "base")),
+            "chunk_key": str(chunk.get("chunk_key", _normalize_chunk_title(str(chunk.get("title", ""))))),
+        }
+
+        reference = _normalize_reference_metadata(chunk.get("reference"))
+        media = _normalize_media_metadata(chunk.get("media"))
+        if reference is not None:
+            normalized_chunk["reference"] = reference
+        if media:
+            normalized_chunk["media"] = media
+
+        merged_chunks.append(cast(LoreChunk, normalized_chunk))
 
     key_to_index = {
         str(chunk.get("chunk_key", _normalize_chunk_title(str(chunk.get("title", ""))))): index
@@ -87,22 +164,28 @@ def _merge_overlay_chunks(base_chunks: list[LoreChunk], overlay_chunks: list[Lor
 
     for chunk in overlay_chunks:
         key = str(chunk.get("chunk_key", _normalize_chunk_title(str(chunk.get("title", "")))))
-        normalized_chunk = cast(
-            LoreChunk,
-            {
-                "title": str(chunk.get("title", "")),
-                "text": str(chunk.get("text", "")),
-                "source": "overlay",
-                "chunk_key": key,
-            },
-        )
+        normalized_chunk_payload: dict[str, object] = {
+            "title": str(chunk.get("title", "")),
+            "text": str(chunk.get("text", "")),
+            "source": "overlay",
+            "chunk_key": key,
+        }
+
+        reference = _normalize_reference_metadata(chunk.get("reference"))
+        media = _normalize_media_metadata(chunk.get("media"))
+        if reference is not None:
+            normalized_chunk_payload["reference"] = reference
+        if media:
+            normalized_chunk_payload["media"] = media
+
+        overlay_chunk = cast(LoreChunk, normalized_chunk_payload)
 
         existing_index = key_to_index.get(key)
         if existing_index is None:
             key_to_index[key] = len(merged_chunks)
-            merged_chunks.append(normalized_chunk)
+            merged_chunks.append(overlay_chunk)
         else:
-            merged_chunks[existing_index] = normalized_chunk
+            merged_chunks[existing_index] = overlay_chunk
 
     return merged_chunks
 
