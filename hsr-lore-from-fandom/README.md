@@ -12,6 +12,17 @@ Ask any Honkai: Star Rail lore question and get a cited answer.
 
 Powered by a hybrid BM25 + FAISS retrieval pipeline over 22k chunks from the HSR Fandom wiki, with answers synthesised by Llama 3.1 8B Instruct.
 
+## Minimal Unit Tests
+
+Use a small pytest baseline before adding features:
+
+```bash
+pip install -r requirements.txt
+pytest -q
+```
+
+The current suite covers deterministic helpers (intent routing and text cleaning) and avoids heavy model/index initialization.
+
 ## Runtime Initialization
 
 The app defaults to lazy initialization, which keeps startup faster but makes the first query pay the full model/index/BM25 warmup cost.

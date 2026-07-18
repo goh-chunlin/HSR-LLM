@@ -51,6 +51,21 @@ jobs:
           git lfs version || (sudo apt-get update && sudo apt-get install -y git-lfs)
           git lfs install
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r hsr-lore-from-fandom/requirements.txt
+
+      - name: Run unit tests
+        working-directory: hsr-lore-from-fandom
+        run: |
+          pytest -q
+
       - name: Verify required runtime artifacts exist
         run: |
           test -f hsr-lore-from-fandom/artifacts/hsr_v1_chunks.json
