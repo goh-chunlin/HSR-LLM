@@ -1,7 +1,33 @@
 [
   {
     "title": "Silver Wolf",
-    "text": "Silver Wolf is a Stellaron Hunter from Punklorde. She is an Emanator of Elation. Her LV. 999 state is a temporary form, not her normal baseline power. It is enabled by a special blank cartridge and restricted by Elio."
+    "text": "Silver Wolf is a Stellaron Hunter from Punklorde. She is an Emanator of Elation. Her LV. 999 state is a temporary form, not her normal baseline power. It is enabled by a special blank cartridge and restricted by Elio.",
+    "media": [
+      {
+        "url": "https://upload-os-bbs.hoyolab.com/upload/2026/04/14/45680215894722e17236f100acc4c53d_2865914120068306137.jpg?x-oss-process=image%2Fresize%2Cs_1000%2Fauto-orient%2C0%2Finterlace%2C1%2Fformat%2Cwebp%2Fquality%2Cq_70",
+        "type": "image",
+        "title": "Silver Wolf LV.999",
+        "description": "Silver Wolf Lv 999 is a 5-Star Imaginary and Elation character.",
+        "attributionUrl": "https://www.hoyolab.com/article/44655091",
+        "copyrightOrLicense": "Copyright HoYoverse, used under fair use"
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=edceHCWiC1I",
+        "type": "video",
+        "title": "Honkai: Star Rail Version 4.2 Special Programme",
+        "description": "Caicai, Combat Designer, reveals Silver Wolf is an Emanator of Elation in the Honkai: Star Rail Version 4.2 Special Programme.",
+        "attributionUrl": "https://www.youtube.com/watch?v=edceHCWiC1I",
+        "copyrightOrLicense": "Copyright HoYoverse, used under fair use"
+      },
+      {
+        "url": "https://www.youtube.com/watch?v=FArOcK-HzXo",
+        "type": "video",
+        "title": "Improv Tour Trailer: Beginner's Guide",
+        "description": "Follow Silver Wolf, a skilled hacker from Punklorde, as she navigates a harsh reality where life functions like a relentless game of progression and levels.",
+        "attributionUrl": "https://www.youtube.com/watch?v=FArOcK-HzXo",
+        "copyrightOrLicense": "Copyright HoYoverse, used under fair use"
+      }
+    ]
   },
   {
     "title": "LV. 999",
