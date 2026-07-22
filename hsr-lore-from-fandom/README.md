@@ -81,3 +81,56 @@ python3 inspect_lore_hsr.py --query "Stellaron Hunters" --query-scope content --
 Use `--query` when you know a lore phrase but not the page title. The default debugging-friendly scope is cleaned content; you can also search `title`, `raw`, or `any`.
 
 `extract_lore_hsr.py` is now extraction-only. `inspect_lore_hsr.py` owns the page-level debugging workflow.
+
+## Architecture
+
+### Data Pipeline
+
+```mermaid
+flowchart TD
+	XML[source_data/honkai_star_rail_pages_current.xml]
+    EXTRACT[extract_lore_hsr.py]
+    UTILS[lore_dump_utils.py]
+    CLEAN[Wikitext cleaning + filtering + skip rules]
+    JSONL[artifacts/hsr_v1_raw_lore.jsonl]
+    BUILD[build_lore_vector_db.py]
+    EMBED[sentence-transformers all-MiniLM-L6-v2]
+    FAISSIDX[artifacts/my_hsr_1.0_index.faiss]
+    CHUNKS[artifacts/hsr_v1_chunks.json]
+    OVERLAY[artifacts/hsr_v1_overlay.json optional]
+
+    XML --> EXTRACT --> UTILS --> CLEAN --> JSONL
+    JSONL --> BUILD --> EMBED
+    BUILD --> FAISSIDX
+    BUILD --> CHUNKS
+    OVERLAY -. merged at runtime .-> CHUNKS
+```
+
+
+### Hugging Face Space
+
+```mermaid
+flowchart TD
+	USER[User question]
+    APP[app.py Gradio UI]
+    ORCHESTRATOR[rag_service.py Orchestrator]
+    RUNTIME[rag_runtime.py BM25 + FAISS + Overlay JSON]
+    INTENT[rag_intent.py classify intent + top_k + score adjust]
+    RETRIEVE[rag_retrieval.py hybrid retrieval]
+    GENERATE[rag_generation.py answer synthesis]
+	
+    HF[Hugging Face InferenceClient Llama 3.1 8B Instruct]
+	OBS[observability.py OpenTelemetry traces + metrics]
+
+	USER --> APP --> ORCHESTRATOR
+	ORCHESTRATOR --> RUNTIME
+	RUNTIME --> RETRIEVE
+	ORCHESTRATOR --> INTENT
+	ORCHESTRATOR --> RETRIEVE
+	INTENT --> RETRIEVE
+	RETRIEVE -->|top chunks with scores| GENERATE
+	GENERATE --> HF --> GENERATE
+	GENERATE -. response .-> ORCHESTRATOR --> APP
+	ORCHESTRATOR --> OBS
+	GENERATE --> OBS
+```
