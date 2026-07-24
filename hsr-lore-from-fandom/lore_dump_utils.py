@@ -1,8 +1,10 @@
 import json
 import os
 import re
+import hashlib
+import urllib.parse
 import xml.etree.ElementTree as ET
-from typing import Final, Iterator, TypedDict
+from typing import Final, Iterator, NotRequired, TypedDict
 
 BASE_DIR: Final[str] = os.path.dirname(os.path.abspath(__file__))
 SOURCE_DATA_DIR: Final[str] = os.path.join(BASE_DIR, "source_data")
@@ -47,11 +49,24 @@ STRIP_PATTERNS = re.compile(
     re.MULTILINE | re.IGNORECASE
 )
 
+GALLERY_BLOCK_PATTERN = re.compile(r'<gallery[^>]*>(.*?)</gallery>', re.DOTALL | re.IGNORECASE)
+MEDIA_FILE_LINE_PATTERN = re.compile(r'(?i)\.(png|jpg|jpeg|gif|webm|mp4)$')
+EXTERNAL_LINK_PATTERN = re.compile(r'^\[(https?://\S+)\s+(.+?)\]$')
+FANDOM_IMAGE_BASE = "https://static.wikia.nocookie.net/houkai-star-rail/images"
+
+
+class MediaMetadata(TypedDict):
+    url: str
+    type: str
+    title: NotRequired[str]
+    attributionUrl: NotRequired[str]
+
 
 class LorePage(TypedDict):
     title: str
     raw_content: str
     cleaned_content: str
+    media: list[MediaMetadata]
 
 
 def ensure_parent_dir(path: str) -> None:
@@ -87,6 +102,79 @@ def page_matches_query(page: LorePage, query: str, scope: str) -> bool:
         haystacks = (page["title"], page["cleaned_content"], page["raw_content"])
 
     return any(normalized_query in haystack.lower() for haystack in haystacks)
+
+
+def get_fandom_image_url(wiki_file_string: str) -> str | None:
+    """Convert a Fandom wiki image line into a direct static CDN URL."""
+    raw_filename = wiki_file_string.split('|', 1)[0].strip()
+    if not raw_filename:
+        return None
+
+    if ":" in raw_filename:
+        namespace, name = raw_filename.split(':', 1)
+        if namespace.lower() in {"file", "image"}:
+            raw_filename = name.strip()
+
+    if not raw_filename:
+        return None
+
+    filename = raw_filename.replace(' ', '_')
+    filename_hash = hashlib.md5(filename.encode('utf-8')).hexdigest()
+    bucket1 = filename_hash[0]
+    bucket2 = filename_hash[:2]
+    url_safe_filename = urllib.parse.quote(filename)
+    return f"{FANDOM_IMAGE_BASE}/{bucket1}/{bucket2}/{url_safe_filename}/revision/latest"
+
+
+def _parse_media_caption(caption: str) -> tuple[str | None, str | None]:
+    normalized_caption = caption.strip()
+    if not normalized_caption:
+        return None, None
+
+    link_match = EXTERNAL_LINK_PATTERN.match(normalized_caption)
+    if link_match:
+        return link_match.group(2).strip() or None, link_match.group(1).strip() or None
+
+    return normalized_caption, None
+
+
+def extract_gallery_media(text: str | None) -> list[MediaMetadata]:
+    if not text:
+        return []
+
+    comment_stripped = re.sub(r'<!--.*?-->', '', text, flags=re.DOTALL)
+    extracted_media: list[MediaMetadata] = []
+
+    for block_match in GALLERY_BLOCK_PATTERN.finditer(comment_stripped):
+        block_text = block_match.group(1)
+        for raw_line in block_text.splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith('|'):
+                continue
+
+            raw_filename = line.split('|', 1)[0].strip()
+            if not MEDIA_FILE_LINE_PATTERN.search(raw_filename):
+                continue
+
+            image_url = get_fandom_image_url(line)
+            if image_url is None:
+                continue
+
+            caption = line.split('|', 1)[1] if '|' in line else ''
+            media_title, attribution_url = _parse_media_caption(caption)
+
+            media_record: MediaMetadata = {
+                "url": image_url,
+                "type": "image",
+            }
+            if media_title is not None:
+                media_record["title"] = media_title
+            if attribution_url is not None:
+                media_record["attributionUrl"] = attribution_url
+
+            extracted_media.append(media_record)
+
+    return extracted_media
 
 
 def extract_description_templates(text: str) -> str:
@@ -225,6 +313,7 @@ def iter_lore_pages(query: str | None = None, query_scope: str = "title") -> Ite
                 root.clear()
                 continue
 
+            media = extract_gallery_media(text)
             cleaned_text = clean_wikitext(text, title)
             if should_skip_content(title, cleaned_text) or len(cleaned_text) <= 100:
                 elem.clear()
@@ -235,6 +324,7 @@ def iter_lore_pages(query: str | None = None, query_scope: str = "title") -> Ite
                 "title": title,
                 "raw_content": text,
                 "cleaned_content": cleaned_text,
+                "media": media,
             }
 
             if query and not page_matches_query(page, query, query_scope):
@@ -271,6 +361,9 @@ def write_clean_lore_jsonl(limit: int | None = None, output_path: str | None = N
                 "title": page["title"],
                 "content": page["cleaned_content"],
             }
+            if page["media"]:
+                data_point = dict[str, object](data_point)
+                data_point["media"] = page["media"]
             output_file.write(json.dumps(data_point, ensure_ascii=False) + "\n")
             saved_count += 1
 

@@ -7,7 +7,7 @@ os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 import json
 import sys
-from typing import Final, TypedDict, cast
+from typing import Final, NotRequired, TypedDict, cast
 from sentence_transformers import SentenceTransformer
 import faiss
 
@@ -37,6 +37,46 @@ BANNED_PREFIXES = (
 class ChunkMetadata(TypedDict):
     title: str
     text: str
+    media: NotRequired[list[dict[str, str]]]
+
+
+def _read_str(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip()
+    return normalized or None
+
+
+def normalize_media_records(raw_media: object) -> list[dict[str, str]]:
+    if not isinstance(raw_media, list):
+        return []
+
+    raw_entries = cast(list[object], raw_media)
+    normalized_media: list[dict[str, str]] = []
+    for entry in raw_entries:
+        if not isinstance(entry, dict):
+            continue
+
+        entry_dict = cast(dict[str, object], entry)
+        url = _read_str(entry_dict.get("url"))
+        media_type = _read_str(entry_dict.get("type"))
+        media_type = media_type.lower() if media_type is not None else None
+        if url is None or media_type not in {"image", "video"}:
+            continue
+
+        normalized_entry: dict[str, str] = {
+            "url": url,
+            "type": media_type,
+        }
+
+        for key in ("title", "description", "attributionUrl", "copyrightOrLicense"):
+            value = _read_str(entry_dict.get(key))
+            if value is not None:
+                normalized_entry[key] = value
+
+        normalized_media.append(normalized_entry)
+
+    return normalized_media
 
 
 def validate_runtime() -> bool:
@@ -99,8 +139,10 @@ def build_database() -> None:
             record = cast(dict[str, object], data)
             title_value = record.get("title", "Unknown Source")
             content_value = record.get("content", "")
+            media_value = record.get("media", [])
             title = title_value if isinstance(title_value, str) else "Unknown Source"
             content = content_value if isinstance(content_value, str) else ""
+            media = normalize_media_records(media_value)
             
             # Skip empty entries
             if not content.strip():
@@ -118,10 +160,13 @@ def build_database() -> None:
 
                 all_chunks.append(context_anchored_text)
                 # Keep track of where this piece of info came from
-                all_metadata.append({
+                metadata: ChunkMetadata = {
                     "title": title,
-                    "text": chunk
-                })
+                    "text": chunk,
+                }
+                if media:
+                    metadata["media"] = media
+                all_metadata.append(metadata)
 
     print(f"Total text chunks created: {len(all_chunks)}")
     if not all_chunks:
