@@ -65,7 +65,7 @@ def generate_answer(
         try:
             import huggingface_hub as hf
 
-            client = hf.InferenceClient("Qwen/Qwen2.5-7B-Instruct")
+            client = hf.InferenceClient("meta-llama/Llama-3.1-8B-Instruct")
             response = client.chat_completion(  # type: ignore[call-overload]
                 messages=[
                     {"role": "system", "content": system_prompt},
