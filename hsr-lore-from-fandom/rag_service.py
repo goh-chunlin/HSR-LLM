@@ -18,6 +18,9 @@ from rag_runtime import RuntimeState
 from rag_types import RetrievedChunk
 
 
+GalleryItem = tuple[str, str]
+
+
 def _format_single_line(value: object) -> str:
     return " ".join(str(value).strip().split())
 
@@ -118,6 +121,53 @@ def _youtube_thumbnail_url(video_id: str) -> str:
     return f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
 
 
+def _gallery_caption(match: RetrievedChunk, entry: object) -> str:
+    entry_dict = cast(dict[str, object], entry)
+    parts: list[str] = []
+
+    title = _format_single_line(entry_dict.get("title", ""))
+    description = _format_single_line(entry_dict.get("description", ""))
+    attribution_url = _format_single_line(entry_dict.get("attributionUrl", ""))
+    copyright_or_license = _format_single_line(entry_dict.get("copyrightOrLicense", ""))
+
+    if title:
+        parts.append(title)
+    if description:
+        parts.append(description)
+    if attribution_url:
+        parts.append(f"Attribution: {attribution_url}")
+    if copyright_or_license:
+        parts.append(f"Rights: {copyright_or_license}")
+
+    source_title = _normalize_optional_str(match.get("title"))
+    if source_title:
+        parts.append(f"Source: {source_title}")
+
+    return " | ".join(parts)
+
+
+def _collect_gallery_items(matches: list[RetrievedChunk], max_media: int = 10) -> list[GalleryItem]:
+    gallery_items: list[GalleryItem] = []
+    seen_urls: set[str] = set()
+
+    for match in matches:
+        media = match.get("media")
+        if media is None or not media:
+            continue
+
+        for entry in media[:max_media]:
+            media_type = _format_single_line(entry.get("type", "")) or "unknown"
+            url = _format_single_line(entry.get("url", ""))
+            if not url or url in seen_urls:
+                continue
+
+            if media_type == "image" or (media_type == "video" and _is_probably_video_url(url)):
+                gallery_items.append((url, _gallery_caption(match, entry)))
+                seen_urls.add(url)
+
+    return gallery_items
+
+
 def _append_reference_block(lines: list[str], match: RetrievedChunk) -> None:
     reference = match.get("reference")
     if not isinstance(reference, dict):
@@ -151,7 +201,10 @@ def _append_media_block(lines: list[str], match: RetrievedChunk, max_media: int 
     if media is None or not media:
         return
 
-    lines.append("  - Media Preview:")
+    gallery_count = 0
+    youtube_lines: list[str] = []
+    other_lines: list[str] = []
+
     for entry in media[:max_media]:
         media_type = _format_single_line(entry.get("type", "")) or "unknown"
         url = _format_single_line(entry.get("url", ""))
@@ -159,39 +212,61 @@ def _append_media_block(lines: list[str], match: RetrievedChunk, max_media: int 
         description = _format_single_line(entry.get("description", ""))
         attribution_url = _format_single_line(entry.get("attributionUrl", ""))
         copyright_or_license = _format_single_line(entry.get("copyrightOrLicense", ""))
+        entry_lines: list[str] | None = None
 
         label = title or url or "(missing URL)"
         if media_type == "image" and url:
-            lines.append(f"    - Image: {label}")
-            lines.append(f"      ![{label}]({url})")
+            gallery_count += 1
         elif media_type == "video" and url:
             youtube_video_id = _extract_youtube_video_id(url)
             if youtube_video_id is not None:
                 watch_url = _youtube_watch_url(youtube_video_id)
                 thumb_url = _youtube_thumbnail_url(youtube_video_id)
-                lines.append(f"    - YouTube: [{label}]({watch_url})")
-                lines.append(f"      [![{label}]({thumb_url})]({watch_url})")
-                lines.append("      Click the thumbnail to watch on YouTube.")
-            else:
-                lines.append(f"    - Video: [{label}]({url})")
+                entry_lines = [
+                    f"    - YouTube: [{label}]({watch_url})",
+                    f"      [![{label}]({thumb_url})]({watch_url})",
+                    "      Click the thumbnail to watch on YouTube.",
+                ]
             if _is_probably_video_url(url):
-                lines.append(f"      <video src=\"{url}\" controls width=\"480\"></video>")
-                lines.append("      If your browser blocks inline playback, open the link above.")
+                gallery_count += 1
             elif youtube_video_id is None:
-                lines.append("      Open the link to watch this video.")
+                entry_lines = [
+                    f"    - Video: [{label}]({url})",
+                    "      Open the link to watch this video.",
+                ]
         elif url:
-            lines.append(f"    - {media_type}: [{label}]({url})")
+            entry_lines = [f"    - {media_type}: [{label}]({url})"]
         else:
-            lines.append(f"    - {media_type}: {label}")
+            entry_lines = [f"    - {media_type}: {label}"]
 
         if description:
-            lines.append(f"      - Description: {description}")
+            if entry_lines is not None:
+                entry_lines.append(f"      - Description: {description}")
         if attribution_url:
-            lines.append(f"      - Attribution: {attribution_url}")
+            if entry_lines is not None:
+                entry_lines.append(f"      - Attribution: {attribution_url}")
         if copyright_or_license:
-            lines.append(f"      - Rights: {copyright_or_license}")
+            if entry_lines is not None:
+                entry_lines.append(f"      - Rights: {copyright_or_license}")
 
-def hsr_rag_interface(user_query: str, runtime: RuntimeState) -> str:
+        if entry_lines is not None:
+            if media_type == "video" and url and _extract_youtube_video_id(url) is not None:
+                youtube_lines.extend(entry_lines)
+            else:
+                other_lines.extend(entry_lines)
+
+    if gallery_count == 0 and not youtube_lines and not other_lines:
+        return
+
+    lines.append("  - Media Preview:")
+    if gallery_count:
+        suffix = "item" if gallery_count == 1 else "items"
+        lines.append(f"    - Gallery: {gallery_count} {suffix} shown below.")
+    lines.extend(youtube_lines)
+    lines.extend(other_lines)
+
+
+def hsr_rag_interface(user_query: str, runtime: RuntimeState) -> tuple[str, list[GalleryItem]]:
     request_started = time.perf_counter()
     request_status = "unknown"
     answer_len = 0
@@ -212,12 +287,14 @@ def hsr_rag_interface(user_query: str, runtime: RuntimeState) -> str:
                     "### Runtime initialization failed.\n"
                     "Required artifacts may be missing in this deployment.\n\n"
                     f"**Error:** `{runtime.init_error}`"
+                    ,
+                    [],
                 )
 
             normalized_query = normalize_user_query(user_query)
             if not normalized_query:
                 request_status = "empty_query"
-                return "### Please enter a lore question."
+                return "### Please enter a lore question.", []
 
             span.set_attribute("app.query.normalized_length", len(normalized_query))
 
@@ -241,7 +318,7 @@ def hsr_rag_interface(user_query: str, runtime: RuntimeState) -> str:
 
             if not matches:
                 request_status = "no_match"
-                return "### I couldn't find any documents matching that query."
+                return "### I couldn't find any documents matching that query.", []
 
             ai_response = generate_answer(normalized_query, matches, tracer=_tracer, intent_label=intent_label)
             answer_len = len(ai_response)
@@ -254,13 +331,14 @@ def hsr_rag_interface(user_query: str, runtime: RuntimeState) -> str:
             final_output = f"## 💬 Answer\n{ai_response}\n\n"
             final_output += "---\n### 🔍 Retrieved Reference Sources\n"
             display_matches = _dedupe_matches_for_display(matches)
+            gallery_items = _collect_gallery_items(display_matches)
             for match in display_matches:
                 lines = [f"- **{match['title']}** (Score: {match['score']:.4f})"]
                 _append_reference_block(lines, match)
                 _append_media_block(lines, match)
                 final_output += "\n".join(lines) + "\n"
 
-            return final_output
+            return final_output, gallery_items
         except Exception as e:
             request_status = "exception"
             span.record_exception(e)

@@ -16,7 +16,7 @@ print("=== APP MODULE IMPORT START ===", flush=True)
 runtime = RuntimeState()
 
 
-def _run_query(user_query: str) -> str:
+def _run_query(user_query: str) -> tuple[str, list[tuple[str, str]]]:
     return hsr_rag_interface(user_query, runtime)
 
 # Build the simple Gradio layout
@@ -28,7 +28,16 @@ demo = ui.Interface(
         max_length=MAX_USER_QUERY_CHARS,
         info=f"Input is limited to {MAX_USER_QUERY_CHARS} characters.",
     ),
-    outputs=ui.Markdown(),
+    outputs=[
+        ui.Markdown(),
+        ui.Gallery(
+            label="Related Media",
+            columns=2,
+            object_fit="contain",
+            height=360,
+            preview=True,
+        ),
+    ],
     title="🌌 Honkai: Star Rail Lore RAG Engine",
     description=(
         "Hybrid retrieval backend combining BM25 keyword matching and FAISS dense vector embeddings. "

@@ -135,10 +135,11 @@ def test_hsr_rag_interface_handles_empty_query(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setattr(rag_service, "normalize_user_query", _normalize_empty)
 
     runtime = _FakeRuntime()
-    result = str(rag_service.hsr_rag_interface("   ", runtime))
+    result, gallery_items = rag_service.hsr_rag_interface("   ", runtime)
 
     assert runtime.initialize_calls == 1
     assert result == "### Please enter a lore question."
+    assert gallery_items == []
     assert counter.calls[-1][1]["status"] == "empty_query"
     assert answer_hist.calls == []
 
@@ -154,12 +155,13 @@ def test_hsr_rag_interface_happy_path(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(rag_service, "generate_answer", _answer_kafka)
 
     runtime = _FakeRuntime()
-    result = str(rag_service.hsr_rag_interface("Who is Kafka?", runtime))
+    result, gallery_items = rag_service.hsr_rag_interface("Who is Kafka?", runtime)
 
     assert runtime.initialize_calls == 1
     assert "## 💬 Answer" in result
     assert "Kafka is a Stellaron Hunter." in result
     assert "- **Kafka** (Score: 0.9900)" in result
+    assert gallery_items == []
     assert counter.calls[-1][1]["status"] == "ok"
     assert len(answer_hist.calls) == 1
 
@@ -248,16 +250,18 @@ def test_hsr_rag_interface_renders_reference_and_media(monkeypatch: pytest.Monke
     monkeypatch.setattr(rag_service, "generate_answer", _answer_kafka)
 
     runtime = _FakeRuntime()
-    result = str(rag_service.hsr_rag_interface("Who is Kafka?", runtime))
+    result, gallery_items = rag_service.hsr_rag_interface("Who is Kafka?", runtime)
 
     assert "- **Kafka** (Score: 0.9900)" in result
     assert "Source: [HSR Wiki](https://example.com/kafka)" in result
     assert "License: CC-BY-SA-3.0" in result
     assert "Media Preview:" in result
-    assert "Image: Kafka Portrait" in result
-    assert "![Kafka Portrait](https://example.com/kafka.png)" in result
+    assert "Gallery: 1 item shown below." in result
     assert "YouTube: [Kafka Story Clip](https://www.youtube.com/watch?v=dQw4w9WgXcQ)" in result
     assert "[![Kafka Story Clip](https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg)](https://www.youtube.com/watch?v=dQw4w9WgXcQ)" in result
+    assert gallery_items == [
+        ("https://example.com/kafka.png", "Kafka Portrait | Source: Kafka")
+    ]
     assert counter.calls[-1][1]["status"] == "ok"
     assert len(answer_hist.calls) == 1
 
@@ -273,9 +277,10 @@ def test_hsr_rag_interface_dedupes_displayed_reference_sources(monkeypatch: pyte
     monkeypatch.setattr(rag_service, "generate_answer", _answer_kafka)
 
     runtime = _FakeRuntime()
-    result = str(rag_service.hsr_rag_interface("Who is Asta?", runtime))
+    result, gallery_items = rag_service.hsr_rag_interface("Who is Asta?", runtime)
 
     assert result.count("- **Asta**") == 1
     assert "- **Messages/Asta**" in result
+    assert gallery_items == []
     assert counter.calls[-1][1]["status"] == "ok"
     assert len(answer_hist.calls) == 1
