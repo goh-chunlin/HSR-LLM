@@ -16,8 +16,9 @@ print("=== APP MODULE IMPORT START ===", flush=True)
 runtime = RuntimeState()
 
 
-def _run_query(user_query: str) -> tuple[str, list[tuple[str, str]]]:
-    return hsr_rag_interface(user_query, runtime)
+def _run_query(user_query: str) -> tuple[str, ui.Gallery]:
+    answer_markdown, gallery_items = hsr_rag_interface(user_query, runtime)
+    return answer_markdown, ui.Gallery(value=gallery_items, visible=bool(gallery_items))
 
 # Build the simple Gradio layout
 demo = ui.Interface(
@@ -36,6 +37,7 @@ demo = ui.Interface(
             object_fit="contain",
             height=360,
             preview=True,
+            visible=False,
         ),
     ],
     title="🌌 Honkai: Star Rail Lore RAG Engine",
