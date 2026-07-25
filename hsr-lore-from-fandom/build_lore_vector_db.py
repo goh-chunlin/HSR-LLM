@@ -112,7 +112,7 @@ def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVE
 
 def build_database() -> None:
     if not validate_runtime():
-        return
+        raise SystemExit(1)
 
     # Prevent tokenizers/joblib worker over-allocation noise in local runs.
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
@@ -120,7 +120,7 @@ def build_database() -> None:
 
     if not os.path.exists(INPUT_JSONL):
         print(f"Error: Cannot find {INPUT_JSONL}. Run your extractor first.")
-        return
+        raise SystemExit(1)
 
     print("Loading embedding model (all-MiniLM-L6-v2)...")
     # This model fits completely inside memory and runs lightning fast on CPU
@@ -171,7 +171,7 @@ def build_database() -> None:
     print(f"Total text chunks created: {len(all_chunks)}")
     if not all_chunks:
         print("Error: No chunks were produced from the input JSONL.")
-        return
+        raise SystemExit(1)
 
     print("Generating dense vector embeddings... (This will utilize your Mac's CPU/GPU efficiently)")
     
