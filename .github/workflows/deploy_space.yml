@@ -75,9 +75,18 @@ jobs:
         run: |
           echo "Starting deployment..."
 
-          echo "Pushing all LFS objects..."
-          git lfs push --all space
+          echo "Preparing history-free snapshot..."
+          snapshot_dir=$(mktemp -d)
+          git archive --format=tar HEAD:hsr-lore-from-fandom | tar -xf - -C "$snapshot_dir"
 
-          echo "Executing subtree split and force push to Hugging Face Space..."
-          split_commit=$(git subtree split --prefix=hsr-lore-from-fandom HEAD)
-          git push space "${split_commit}:main" --force
+          pushd "$snapshot_dir"
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote add space "https://oauth2:${HUGGINGFACE_TOKEN}@huggingface.co/spaces/${HUGGINGFACE_USERNAME}/${HUGGINGFACE_SPACE_REPO}"
+          git lfs install
+          git add .
+          git commit -m "chore: deploy space snapshot"
+          git lfs push space HEAD
+          git push space HEAD:main --force
+          popd

@@ -106,9 +106,20 @@ jobs:
       - name: Push updated artifacts to Hugging Face Space
         if: steps.detect_changes.outputs.changed == 'true'
         run: |
+          snapshot_dir=$(mktemp -d)
+          git archive --format=tar HEAD:hsr-lore-from-fandom | tar -xf - -C "$snapshot_dir"
+
+          pushd "$snapshot_dir"
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote add space "https://oauth2:${HUGGINGFACE_TOKEN}@huggingface.co/spaces/${HUGGINGFACE_USERNAME}/${HUGGINGFACE_SPACE_REPO}"
+          git lfs install
+          git add .
+          git commit -m "chore: sync space snapshot"
           git lfs push space HEAD
-          split_commit=$(git subtree split --prefix=hsr-lore-from-fandom HEAD)
-          git push space "${split_commit}:main" --force
+          git push space HEAD:main --force
+          popd
 
       - name: Summary
         run: |
