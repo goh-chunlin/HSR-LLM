@@ -146,7 +146,7 @@ def _append_reference_block(lines: list[str], match: RetrievedChunk) -> None:
             lines.append(f"  - {label}: {value}")
 
 
-def _append_media_block(lines: list[str], match: RetrievedChunk, max_media: int = 3) -> None:
+def _append_media_block(lines: list[str], match: RetrievedChunk, max_media: int = 10) -> None:
     media = match.get("media")
     if media is None or not media:
         return

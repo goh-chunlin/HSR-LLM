@@ -32,6 +32,22 @@ def test_get_fandom_image_url_builds_static_cdn_path() -> None:
     assert result.endswith("/revision/latest")
 
 
+def test_extract_gallery_media_strips_gallery_link_params_from_caption() -> None:
+    raw = """\
+<gallery widths="300px">
+Area Master Control Zone.png|link=Master Control Zone|[[Master Control Zone]]
+Area Base Zone.png|link=Base Zone|[[Base Zone]]
+Area Seclusion Zone.png|[[Seclusion Zone]]
+</gallery>
+"""
+    media = extract_gallery_media(raw)
+
+    assert len(media) == 3
+    assert media[0]["title"] == "Master Control Zone"
+    assert media[1]["title"] == "Base Zone"
+    assert media[2]["title"] == "Seclusion Zone"
+
+
 def test_extract_gallery_media_parses_image_lines_and_caption_links() -> None:
     raw = """
 ==Character Introduction==

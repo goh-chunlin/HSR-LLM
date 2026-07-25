@@ -135,7 +135,18 @@ def _parse_media_caption(caption: str) -> tuple[str | None, str | None]:
     if link_match:
         return link_match.group(2).strip() or None, link_match.group(1).strip() or None
 
-    return normalized_caption, None
+    # Gallery lines can contain key=value params before the display caption, e.g.:
+    #   link=Master Control Zone|[[Master Control Zone]]
+    #   alt=Splash Art|Splash Art
+    # Strip those params, then unwrap any [[...]] wikilink brackets.
+    parts = normalized_caption.split('|')
+    display_parts = [p.strip() for p in parts if '=' not in p.strip()]
+    plain_parts = [
+        re.sub(r'\[\[(?:[^|\]]*\|)?([^\]]+)\]\]', r'\1', p).strip()
+        for p in display_parts
+    ]
+    display_text = next((p for p in reversed(plain_parts) if p), None)
+    return display_text, None
 
 
 def extract_gallery_media(text: str | None) -> list[MediaMetadata]:
