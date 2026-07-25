@@ -198,6 +198,45 @@ def _single_kafka_match_with_metadata(
     ]
 
 
+def _duplicate_asta_matches(
+    _query: str,
+    runtime: object,
+    top_k: int,
+    intent_label: IntentType,
+) -> list[RetrievedChunk]:
+    _ = _query
+    _ = (runtime, top_k, intent_label)
+    return [
+        {
+            "title": "Asta",
+            "text": "Asta profile chunk A",
+            "score": 1.2476,
+            "reference": {
+                "sourceName": "HSR Wiki",
+                "sourceUrl": "https://example.com/asta",
+            },
+        },
+        {
+            "title": "Messages/Asta",
+            "text": "Messages chunk",
+            "score": 0.9272,
+            "reference": {
+                "sourceName": "HSR Wiki",
+                "sourceUrl": "https://example.com/messages-asta",
+            },
+        },
+        {
+            "title": "Asta",
+            "text": "Asta profile chunk B",
+            "score": 0.8612,
+            "reference": {
+                "sourceName": "HSR Wiki",
+                "sourceUrl": "https://example.com/asta",
+            },
+        },
+    ]
+
+
 def test_hsr_rag_interface_renders_reference_and_media(monkeypatch: pytest.MonkeyPatch) -> None:
     rag_service, counter, _latency, answer_hist = _load_rag_service_with_fake_observability(monkeypatch)
     _ = _latency
@@ -219,5 +258,24 @@ def test_hsr_rag_interface_renders_reference_and_media(monkeypatch: pytest.Monke
     assert "![Kafka Portrait](https://example.com/kafka.png)" in result
     assert "YouTube: [Kafka Story Clip](https://www.youtube.com/watch?v=dQw4w9WgXcQ)" in result
     assert "[![Kafka Story Clip](https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg)](https://www.youtube.com/watch?v=dQw4w9WgXcQ)" in result
+    assert counter.calls[-1][1]["status"] == "ok"
+    assert len(answer_hist.calls) == 1
+
+
+def test_hsr_rag_interface_dedupes_displayed_reference_sources(monkeypatch: pytest.MonkeyPatch) -> None:
+    rag_service, counter, _latency, answer_hist = _load_rag_service_with_fake_observability(monkeypatch)
+    _ = _latency
+
+    monkeypatch.setattr(rag_service, "normalize_user_query", _normalize_kafka)
+    monkeypatch.setattr(rag_service, "classify_query_intent", _classify_entity)
+    monkeypatch.setattr(rag_service, "retrieval_top_k_for_intent", _top_k_passthrough)
+    monkeypatch.setattr(rag_service, "retrieve_lore_hybrid", _duplicate_asta_matches)
+    monkeypatch.setattr(rag_service, "generate_answer", _answer_kafka)
+
+    runtime = _FakeRuntime()
+    result = str(rag_service.hsr_rag_interface("Who is Asta?", runtime))
+
+    assert result.count("- **Asta**") == 1
+    assert "- **Messages/Asta**" in result
     assert counter.calls[-1][1]["status"] == "ok"
     assert len(answer_hist.calls) == 1

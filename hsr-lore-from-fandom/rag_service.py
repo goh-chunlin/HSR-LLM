@@ -1,4 +1,5 @@
 import time
+import re
 from typing import cast
 from urllib.parse import parse_qs, urlparse
 
@@ -19,6 +20,57 @@ from rag_types import RetrievedChunk
 
 def _format_single_line(value: object) -> str:
     return " ".join(str(value).strip().split())
+
+
+def _normalize_optional_str(value: object) -> str:
+    if not isinstance(value, str):
+        return ""
+    return _format_single_line(value)
+
+
+def _normalize_title_for_dedup(value: str) -> str:
+    lowered = value.lower()
+    stripped = re.sub(r"[^\w\s]+", " ", lowered)
+    return " ".join(stripped.split())
+
+
+def _display_dedup_key(match: RetrievedChunk) -> str | None:
+    reference = match.get("reference")
+    if isinstance(reference, dict):
+        page_id = _normalize_optional_str(reference.get("pageId"))
+        if page_id:
+            return f"pageId:{page_id}"
+
+        source_url = _normalize_optional_str(reference.get("sourceUrl"))
+        if source_url:
+            return f"sourceUrl:{source_url}"
+
+    title = _normalize_optional_str(match.get("title"))
+    normalized_title = _normalize_title_for_dedup(title)
+    if normalized_title:
+        return f"title:{normalized_title}"
+
+    return None
+
+
+def _dedupe_matches_for_display(matches: list[RetrievedChunk]) -> list[RetrievedChunk]:
+    # Keep only the highest-scoring representative for each page-like key.
+    best_by_key: dict[str, RetrievedChunk] = {}
+    pass_through: list[RetrievedChunk] = []
+
+    for match in matches:
+        key = _display_dedup_key(match)
+        if key is None:
+            pass_through.append(match)
+            continue
+
+        existing = best_by_key.get(key)
+        if existing is None or float(match["score"]) > float(existing["score"]):
+            best_by_key[key] = match
+
+    deduped = list(best_by_key.values()) + pass_through
+    deduped.sort(key=lambda item: float(item["score"]), reverse=True)
+    return deduped
 
 
 def _is_probably_video_url(url: str) -> bool:
@@ -201,7 +253,8 @@ def hsr_rag_interface(user_query: str, runtime: RuntimeState) -> str:
 
             final_output = f"## 💬 Answer\n{ai_response}\n\n"
             final_output += "---\n### 🔍 Retrieved Reference Sources\n"
-            for match in matches:
+            display_matches = _dedupe_matches_for_display(matches)
+            for match in display_matches:
                 lines = [f"- **{match['title']}** (Score: {match['score']:.4f})"]
                 _append_reference_block(lines, match)
                 _append_media_block(lines, match)
