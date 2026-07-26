@@ -1,3 +1,4 @@
+import os
 import html
 import re
 from contextlib import nullcontext
@@ -63,11 +64,16 @@ def generate_answer(
             span.set_attribute("app.intent.label", intent_label)
 
         try:
-            import huggingface_hub as hf
+            from groq import Groq
+            from groq.types.chat import ChatCompletion
 
-            client = hf.InferenceClient("meta-llama/Llama-3.1-8B-Instruct", 
-                                        base_url="https://huggingface.co")
-            response = client.chat_completion(  # type: ignore[call-overload]
+            if not os.environ.get("GROQ_API_KEY"):
+                return "Error: Necessary LLM Provider API key is not set as an environment variable."
+
+            client = Groq()
+
+            response: ChatCompletion = client.chat.completions.create(  # type: ignore[call-overload]
+                model="llama-3.1-8b-instant",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
@@ -75,7 +81,7 @@ def generate_answer(
                 max_tokens=250,
                 temperature=0.1,
             )
-            content = response.choices[0].message.content
+            content = response.choices[0].message.content if response.choices else ""
             final_content = _strip_retrieval_markup(content or "")
             if span is not None:
                 span.set_attribute("app.answer.length", len(final_content))

@@ -4,6 +4,7 @@ numpy
 rank-bm25
 nltk
 huggingface-hub
+groq
 gradio
 opentelemetry-api
 opentelemetry-sdk
