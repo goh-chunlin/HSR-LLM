@@ -35,20 +35,28 @@ class _FakeTracer:
 def test_generate_answer_returns_error_message_on_client_failure(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    class _FailingClient:
-        def __init__(self, _model: str) -> None:
-            raise RuntimeError("hf down")
+    monkeypatch.setenv("GROQ_API_KEY", "test-key")
 
-    fake_hf: Any = types.SimpleNamespace(InferenceClient=_FailingClient)
-    monkeypatch.setitem(sys.modules, "huggingface_hub", fake_hf)
+    class _FailingClient:
+        def __init__(self) -> None:
+            raise RuntimeError("groq down")
+
+    class _ChatModule:
+        ChatCompletion = object
+
+    fake_groq: Any = types.SimpleNamespace(Groq=_FailingClient)
+    monkeypatch.setitem(sys.modules, "groq", fake_groq)
+    monkeypatch.setitem(sys.modules, "groq.types.chat", _ChatModule)
 
     result = generate_answer("Who is Kafka?", [], tracer=None, intent_label="other")
-    assert result == "Error generating answer: hf down"
+    assert result == "Error generating answer: groq down"
 
 
 def test_generate_answer_strips_markup_from_model_output(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setenv("GROQ_API_KEY", "test-key")
+
     class _Msg:
         content: str = "<source_document><title>x</title><content>Final answer</content></source_document>"
 
@@ -58,15 +66,25 @@ def test_generate_answer_strips_markup_from_model_output(
     class _Response:
         choices: list[_Choice] = [_Choice()]
 
-    class _Client:
-        def __init__(self, _model: str) -> None:
-            return None
-
-        def chat_completion(self, **_kwargs: object) -> _Response:
+    class _Completions:
+        def create(self, **_kwargs: object) -> _Response:
             return _Response()
 
-    fake_hf: Any = types.SimpleNamespace(InferenceClient=_Client)
-    monkeypatch.setitem(sys.modules, "huggingface_hub", fake_hf)
+    class _Chat:
+        completions: _Completions = _Completions()
+
+    class _Client:
+        def __init__(self) -> None:
+            return None
+
+        chat: _Chat = _Chat()
+
+    class _ChatModule:
+        ChatCompletion = _Response
+
+    fake_groq: Any = types.SimpleNamespace(Groq=_Client)
+    monkeypatch.setitem(sys.modules, "groq", fake_groq)
+    monkeypatch.setitem(sys.modules, "groq.types.chat", _ChatModule)
 
     result = generate_answer("Who is Kafka?", [], tracer=_FakeTracer(), intent_label="entity_lookup")
     assert "<title>" not in result
